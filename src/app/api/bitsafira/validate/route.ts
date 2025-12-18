@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
             process.env.NEXT_PUBLIC_APP_URL ||
             process.env.NEXT_PUBLIC_BASE_URL ||
             request.nextUrl.origin;
-          const webhookUrl = `${baseUrl.replace(/\\/$/, '')}/api/webhooks/bitsafira`;
+          const webhookUrl = `${baseUrl.replace(/\/$/, '')}/api/webhooks/bitsafira`;
 
           const updatePayload: CreateInstancePayload = {
             id: bitsafiraInstanceId,
