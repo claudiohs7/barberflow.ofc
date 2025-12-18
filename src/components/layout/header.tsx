@@ -48,7 +48,7 @@ export function Header() {
             <Button variant="ghost" asChild className="transition-transform duration-300 hover:scale-105">
               <Link href="/auth/login">Entrar</Link>
             </Button>
-            <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+            <Button asChild className="bg-red-600 hover:bg-red-700 text-white transition-transform duration-300 hover:scale-105 hover:shadow-lg">
               <Link href="/auth/admin/register">Começar</Link>
             </Button>
           </nav>
@@ -91,7 +91,7 @@ export function Header() {
                     <Button variant="ghost" asChild>
                         <Link href="/auth/login">Entrar</Link>
                     </Button>
-                    <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
                         <Link href="/auth/admin/register">Começar</Link>
                     </Button>
                 </div>

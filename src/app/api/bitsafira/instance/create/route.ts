@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
   try {
     const { barbershopId, description } = await request.json();
 
-    if (!barbershopId || !description) {
+    if (!barbershopId) {
       return NextResponse.json(
-        { success: false, message: "ID da barbearia e descricao da instancia sao obrigatorios." },
+        { success: false, message: "ID da barbearia e obrigatorio." },
         { status: 400 },
       );
     }
@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const baseDescription = String(description ?? "").trim() || `Instancia BarberFlow - ${barbershop.name || barbershop.id}`;
+    const emailTag = barbershop.email ? ` - ${barbershop.email}` : "";
+    const finalDescription = `${baseDescription}${emailTag}`;
+
     const bitSafiraToken = barbershop.bitSafiraToken || process.env.BITSAFIRA_TOKEN;
     if (!bitSafiraToken) {
       return NextResponse.json({ success: false, message: "Token da BitSafira nao configurado." }, { status: 400 });
@@ -33,7 +37,7 @@ export async function POST(request: NextRequest) {
     const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/bitsafira/webhook`;
 
     const createPayload: CreateInstancePayload = {
-      descricao: description,
+      descricao: finalDescription,
       urlWebhook: webhookUrl,
     };
     console.log("Payload para criar instancia:", createPayload);
@@ -70,4 +74,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
