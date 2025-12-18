@@ -1,7 +1,6 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import Script from "next/script";
-import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Header } from "@/components/layout/header";
@@ -196,11 +195,15 @@ export default function Home() {
       />
       <main className="flex-1">
         <section className="relative isolate overflow-hidden bg-gray-900 py-24 sm:py-32">
-          <Image
-            src="https://firebasestorage.googleapis.com/v0/b/studio-201065062-ef553.firebasestorage.app/o/Gemini_Generated_Image_rii7etrii7etrii7.png?alt=media&token=4fbed90a-66b0-411d-9f49-953e73981c42"
-            alt="Interface do painel BarberFlow com agendamentos e métricas"
-            fill
-            className="absolute inset-0 -z-20 h-full w-full object-cover object-right md:object-center"
+          <img
+            src="/api/site-assets/home-hero?variant=mobile"
+            alt="Fundo do BarberFlow (mobile)"
+            className="absolute inset-0 -z-20 h-full w-full object-cover md:hidden"
+          />
+          <img
+            src="/api/site-assets/home-hero?variant=desktop"
+            alt="Fundo do BarberFlow (desktop)"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-right md:object-center hidden md:block"
           />
           <div className="absolute inset-0 bg-background/75 -z-10" />
           <div

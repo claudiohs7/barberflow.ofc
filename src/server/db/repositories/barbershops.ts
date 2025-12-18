@@ -218,3 +218,29 @@ export async function listBarbershopsByOwner(ownerId: string) {
 export async function deleteBarbershop(id: string) {
   await prisma.barbershop.delete({ where: { id } });
 }
+
+export async function deleteBarbershopAndData(barbershopId: string) {
+  await prisma.$transaction(async (tx) => {
+    // Things that reference barbershopId directly
+    await tx.whatsappmessagelog.deleteMany({ where: { barbershopId } });
+    await tx.webhook.deleteMany({ where: { barbershopId } });
+    await tx.messagetemplate.deleteMany({ where: { barbershopId } });
+    await tx.expense.deleteMany({ where: { barbershopId } });
+
+    // Tickets/announcements have optional barbershopId, but may still block deletion
+    await tx.ticket.deleteMany({ where: { barbershopId } });
+    await tx.announcement.deleteMany({ where: { barbershopId } });
+
+    // Appointments (and their join tables)
+    await tx.appointmentservice.deleteMany({ where: { appointment: { barbershopId } } });
+    await tx.whatsappmessagequeue.deleteMany({ where: { barbershopId } });
+    await tx.appointment.deleteMany({ where: { barbershopId } });
+
+    // People/services
+    await tx.barber.deleteMany({ where: { barbershopId } });
+    await tx.client.deleteMany({ where: { barbershopId } });
+    await tx.service.deleteMany({ where: { barbershopId } });
+
+    await tx.barbershop.delete({ where: { id: barbershopId } });
+  });
+}

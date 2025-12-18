@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBitSafiraApiClient } from "@/lib/bitsafira/api";
 import type { CreateInstancePayload, CreateInstanceResponse } from "@/lib/bitsafira/types";
 import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/barbershops";
+import { getUserById } from "@/server/db/repositories/users";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const instanceDescription = barbershop.email
-      ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
+    const ownerEmail = barbershop.ownerId ? (await getUserById(barbershop.ownerId))?.email : null;
+    const loginEmail = barbershop.email || ownerEmail;
+
+    const instanceDescription = loginEmail
+      ? `${barbershop.name || "BarberFlow"}-${loginEmail}`
       : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
 
     const bitSafiraToken = barbershop.bitSafiraToken || process.env.BITSAFIRA_TOKEN;

@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, PlusCircle, FilterX, KeyRound, RefreshCw } from 'lucide-react';
+import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, FilterX, KeyRound, RefreshCw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -62,7 +62,7 @@ type SuperAdminBarbershop = {
     ownerId: string;
     email: string;
     phone: string;
-    plan: 'Básico' | 'Premium';
+    plan: 'B├ísico' | 'Premium';
     status: 'Ativa' | 'Inativa';
     expiryDate: string;
     registeredDate: string;
@@ -80,7 +80,7 @@ type SuperAdminBarbershop = {
 };
 
 const planPrices = {
-    'Básico': 49.90,
+    'B├ísico': 49.90,
     'Premium': 119.90
 };
 
@@ -107,7 +107,7 @@ export default function BarbershopsPage() {
             toast({
                 variant: "destructive",
                 title: "Erro ao carregar dados",
-                description: error.message || "Não foi possível carregar as barbearias.",
+                description: error.message || "N├úo foi poss├¡vel carregar as barbearias.",
             });
         } finally {
             setIsLoadingBarbershops(false);
@@ -141,13 +141,13 @@ export default function BarbershopsPage() {
 
             return {
                 id: shop.id,
-                name: shop.name || 'Nome não definido',
+                name: shop.name || 'Nome n├úo definido',
                 legalName: shop.legalName,
                 cpfCnpj: shop.cpfCnpj,
                 ownerId: shop.ownerId,
-                email: shop.email || 'E-mail não informado',
+                email: shop.email || 'E-mail n├úo informado',
                 phone: shop.phone || '(00) 00000-0000',
-                plan: shop.plan || 'Básico',
+                plan: shop.plan || 'B├ísico',
                 status,
                 expiryDate: expiryDate ? format(expiryDate, 'dd/MM/yyyy') : 'N/A',
                 registeredDate: shop.createdAt ? format(new Date(shop.createdAt), 'dd/MM/yyyy') : 'N/A',
@@ -224,11 +224,11 @@ export default function BarbershopsPage() {
                   return { ...prev, address: newAddress as SuperAdminBarbershop['address'] };
               });
             } else {
-                throw new Error(data.error || 'CEP não encontrado.');
+                throw new Error(data.error || 'CEP n├úo encontrado.');
             }
           } catch (error) {
             console.error("Failed to fetch address:", error);
-            toast({ variant: "destructive", title: "Erro de CEP", description: "Não foi possível buscar o endereço." });
+            toast({ variant: "destructive", title: "Erro de CEP", description: "N├úo foi poss├¡vel buscar o endere├ºo." });
           }
         }
       };
@@ -273,17 +273,17 @@ export default function BarbershopsPage() {
 
     const confirmDelete = async () => {
         if (!shopToDelete) {
-            toast({ variant: "destructive", title: "Erro", description: "Nenhuma barbearia selecionada para exclusão." });
+            toast({ variant: "destructive", title: "Erro", description: "Nenhuma barbearia selecionada para exclus├úo." });
             return;
         }
 
         try {
             await fetchJson(`/api/barbershops/${shopToDelete.id}`, { method: "DELETE" });
             setRawBarbershops(prev => prev!.filter(s => s.id !== shopToDelete.id));
-            toast({ title: "Barbearia Excluída!", description: `${shopToDelete.name} foi removida do banco de dados.` });
+            toast({ title: "Barbearia Exclu├¡da!", description: `${shopToDelete.name} foi removida do banco de dados.` });
         } catch (error: any) {
             console.error("Erro ao excluir barbearia:", error);
-            toast({ variant: "destructive", title: "Erro ao Excluir", description: error.message || "Não foi possível remover a barbearia do banco de dados." });
+            toast({ variant: "destructive", title: "Erro ao Excluir", description: error.message || "N├úo foi poss├¡vel remover a barbearia do banco de dados." });
         } finally {
             setIsDeleteDialogOpen(false);
             setShopToDelete(null);
@@ -395,7 +395,7 @@ export default function BarbershopsPage() {
                 await updateDoc(barbershopDocRef, updateData as Record<string, any>);
             }
 
-            toast({ title: "Dados da Barbearia Salvos!", description: "As informações no banco de dados foram atualizadas." });
+            toast({ title: "Dados da Barbearia Salvos!", description: "As informa├º├Áes no banco de dados foram atualizadas." });
             if (typeof window !== "undefined") {
                 const barbershopUpdatePayload = { ...updatedShop, ownerId: updatedShop.ownerId };
                 window.dispatchEvent(new CustomEvent("barbershop-updated", { detail: barbershopUpdatePayload }));
@@ -405,7 +405,7 @@ export default function BarbershopsPage() {
                         JSON.stringify({ ...barbershopUpdatePayload, timestamp: Date.now() })
                     );
                 } catch (error) {
-                    console.warn("Não foi possível sincronizar a atualização entre abas:", error);
+                    console.warn("N├úo foi poss├¡vel sincronizar a atualiza├º├úo entre abas:", error);
                 }
             }
         } catch (error: any) {
@@ -413,7 +413,7 @@ export default function BarbershopsPage() {
             toast({
                 variant: "destructive",
                 title: "Erro ao Salvar",
-                description: error.message || "Não foi possível atualizar os dados da barbearia.",
+                description: error.message || "N├úo foi poss├¡vel atualizar os dados da barbearia.",
             });
         } finally {
             setIsEditDialogOpen(false);
@@ -423,7 +423,7 @@ export default function BarbershopsPage() {
     
     const handleCreate = async () => {
         if (!formState.email || !formState.password || !formState.name) {
-            toast({ variant: "destructive", title: "Erro", description: "Email, senha e nome da barbearia são obrigatórios." });
+            toast({ variant: "destructive", title: "Erro", description: "Email, senha e nome da barbearia s├úo obrigat├│rios." });
             return;
         }
         setIsSubmitting(true);
@@ -454,7 +454,7 @@ export default function BarbershopsPage() {
                     phone: formState.phone,
                     cpfCnpj: formState.cpfCnpj,
                     ownerId,
-                    plan: formState.plan || "Básico",
+                    plan: formState.plan || "B├ísico",
                     status: "Ativa",
                     expiryDate: trialEndDate.toISOString(),
                 }),
@@ -469,7 +469,7 @@ export default function BarbershopsPage() {
         } catch (error: any) {
             console.error("Erro ao criar barbearia:", error);
             const baseDescription = error.message?.includes("in use")
-                ? "Este e-mail já está em uso por outro proprietário."
+                ? "Este e-mail j├í est├í em uso por outro proprieírio."
                 : "Ocorreu um erro ao criar a barbearia.";
             toast({ variant: "destructive", title: "Erro no Cadastro", description: baseDescription });
         } finally {
@@ -485,7 +485,7 @@ export default function BarbershopsPage() {
     
     // const handleUpdateAllBarbershops = async () => {
     //     // This function is no longer needed with the removal of API keys from the barbershop doc.
-    //     toast({ title: "Ação Descontinuada", description: "Esta função não é mais necessária." });
+    //     toast({ title: "A├º├úo Descontinuada", description: "Esta fun├º├úo n├úo ├® mais necess├íria." });
     // };
 
     const getGoogleMapsLink = (address: Barbershop['address']) => {
@@ -511,82 +511,9 @@ export default function BarbershopsPage() {
                             <CardTitle>Gerenciar Barbearias</CardTitle>
                             <CardDescription>Visualize e edite todos os dados das barbearias cadastradas ({displayedBarbershops.length} de {allBarbershops.length})</CardDescription>
                         </div>
-                         <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setFormState({}); setIsAddDialogOpen(isOpen); }}>
-                            <DialogTrigger asChild>
-                                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Nova Barbearia</Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle>Cadastrar Nova Barbearia</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
-                                    <div className="grid gap-4">
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-email">Email do Proprietário</Label>
-                                            <Input id="add-email" name="email" type="email" value={formState.email || ''} onChange={(e) => setFormState(prev => ({...prev, email: e.target.value}))} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-password">Senha Provisória</Label>
-                                            <Input id="add-password" name="password" type="password" value={formState.password || ''} onChange={(e) => setFormState(prev => ({...prev, password: e.target.value}))} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="add-name">Nome da Barbearia</Label>
-                                            <Input id="add-name" name="name" value={formState.name || ''} onChange={handleFormChange} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="add-cpfCnpj">CPF/CNPJ</Label>
-                                            <Input id="add-cpfCnpj" name="cpfCnpj" value={formState.cpfCnpj || ''} onChange={handleCpfCnpjChange} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-legalName">Nome/Empresa (Razão Social)</Label>
-                                            <Input id="add-legalName" name="legalName" value={formState.legalName || ''} onChange={handleFormChange} />
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-2 col-span-1">
-                                                <Label htmlFor="add-cep">CEP</Label>
-                                                <Input id="add-cep" name="cep" value={formState.address?.cep || ''} onChange={handleAddressChange} maxLength={9} />
-                                            </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label htmlFor="add-street">Rua</Label>
-                                                <Input id="add-street" name="street" value={formState.address?.street || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                         <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-number">Número</Label>
-                                                <Input id="add-number" name="number" value={formState.address?.number || ''} onChange={handleAddressChange} />
-                                            </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label htmlFor="add-neighborhood">Bairro</Label>
-                                                <Input id="add-neighborhood" name="neighborhood" value={formState.address?.neighborhood || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-city">Cidade</Label>
-                                                <Input id="add-city" name="city" value={formState.address?.city || ''} onChange={handleAddressChange} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-state">Estado (UF)</Label>
-                                                <Input id="add-state" name="state" value={formState.address?.state || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-phone">WhatsApp do Proprietário</Label>
-                                            <Input id="add-phone" name="phone" value={formState.phone || ''} onChange={handlePhoneChange} maxLength={15} />
-                                        </div>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button variant="outline">Cancelar</Button>
-                                    </DialogClose>
-                                    <Button onClick={handleCreate} disabled={isSubmitting}>
-                                        {isSubmitting ? 'Cadastrando...' : 'Salvar Barbearia'}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                        <Button size="sm" variant="outline" className="gap-2" onClick={loadData}>
+                            <RefreshCw className="h-4 w-4" /> Atualizar
+                        </Button>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 pt-4">
                         <div className="relative flex-grow min-w-[200px]">
@@ -609,7 +536,7 @@ export default function BarbershopsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os Planos</SelectItem>
-                                <SelectItem value="Básico">Básico</SelectItem>
+                                <SelectItem value="B├ísico">B├ísico</SelectItem>
                                 <SelectItem value="Premium">Premium</SelectItem>
                             </SelectContent>
                         </Select>
@@ -635,7 +562,7 @@ export default function BarbershopsPage() {
                                     <div className="flex items-start gap-3">
                                         <MapPin className="h-4 w-4 mt-1 text-muted-foreground"/>
                                         <div className="flex-1">
-                                            <p className="text-sm font-medium">Endereço</p>
+                                            <p className="text-sm font-medium">Endere├ºo</p>
                                             <div className="flex justify-between items-center">
                                                 <p className="text-sm text-muted-foreground">{shop.fullAddressString}</p>
                                                 <Button variant="link" size="sm" asChild className="p-0 h-auto">
@@ -649,14 +576,14 @@ export default function BarbershopsPage() {
                                     <div className="flex items-start gap-3">
                                         <Mail className="h-4 w-4 mt-1 text-muted-foreground"/>
                                         <div>
-                                            <p className="text-sm font-medium">Email do Proprietário</p>
+                                            <p className="text-sm font-medium">Email do Proprio</p>
                                             <p className="text-sm text-muted-foreground">{shop.email}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
                                         <Smartphone className="h-4 w-4 mt-1 text-muted-foreground"/>
                                         <div className="flex-1">
-                                            <p className="text-sm font-medium">WhatsApp do Proprietário</p>
+                                            <p className="text-sm font-medium">WhatsApp do Propriet├írio</p>
                                             <div className="flex justify-between items-center">
                                                 <p className="text-sm text-muted-foreground">{shop.phone}</p>
                                                 <Button variant="link" size="sm" asChild className="p-0 h-auto text-green-500 hover:text-green-500/90">
@@ -711,7 +638,7 @@ export default function BarbershopsPage() {
                     <DialogHeader>
                         <DialogTitle>Editar Barbearia</DialogTitle>
                         <DialogDescription>
-                            Atualize os dados da barbearia {editingShop?.name} (Código: {editingShop?.ownerId})
+                            Atualize os dados da barbearia {editingShop?.name} (C├│digo: {editingShop?.ownerId})
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
@@ -721,7 +648,7 @@ export default function BarbershopsPage() {
                                 <Input id="name" name="name" value={formState.name || ''} onChange={handleFormChange} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="legalName">Nome/Empresa (Razão Social)</Label>
+                                <Label htmlFor="legalName">Nome/Empresa (Raz├úo Social)</Label>
                                 <Input id="legalName" name="legalName" value={formState.legalName || ''} onChange={handleFormChange} />
                             </div>
                             <div className="space-y-2">
@@ -740,7 +667,7 @@ export default function BarbershopsPage() {
                             </div>
                              <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="number">Número</Label>
+                                    <Label htmlFor="number">N├║mero</Label>
                                     <Input id="number" name="number" value={formState.address?.number || ''} onChange={handleAddressChange} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
@@ -764,17 +691,17 @@ export default function BarbershopsPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email do Proprietário</Label>
+                                    <Label htmlFor="email">Email do Propriet├írio</Label>
                                     <Input id="email" name="email" type="email" value={formState.email || ''} onChange={handleFormChange} disabled />
                                     <div className="flex items-start gap-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-300">
                                         <AlertCircleIcon className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className='text-xs'>
-                                            <p>A alteração do e-mail de login deve ser feita diretamente no Firebase Console para garantir a segurança.</p>
+                                            <p>A altera├º├úo do e-mail de login deve ser feita diretamente no Firebase Console para garantir a seguran├ºa.</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">WhatsApp do Proprietário</Label>
+                                    <Label htmlFor="phone">WhatsApp do Propriio</Label>
                                     <Input id="phone" name="phone" value={formState.phone || ''} onChange={handlePhoneChange} maxLength={15} />
                                 </div>
                             </div>
@@ -795,14 +722,14 @@ export default function BarbershopsPage() {
                                     <Label>Plano</Label>
                                     <Select 
                                         value={formState.plan} 
-                                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'Básico' | 'Premium')}
+                                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'B├ísico' | 'Premium')}
                                         disabled={formState.status === 'Inativa'}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecione o plano" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Básico">Básico</SelectItem>
+                                            <SelectItem value="B├ísico">B├ísico</SelectItem>
                                             <SelectItem value="Premium">Premium</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -844,16 +771,16 @@ export default function BarbershopsPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancelar</Button>
                         </DialogClose>
-                        <Button onClick={handleSave}>Salvar Alterações</Button>
+                        <Button onClick={handleSave}>Salvar Altera├º├Áes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setDeleteConfirmationInput(''); setIsDeleteDialogOpen(isOpen);}}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
+                        <AlertDialogTitle>Voc├¬ tem certeza absoluta?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação é <span className="font-bold text-destructive">irreversível</span> e excluirá permanentemente a barbearia <span className='font-bold'>{shopToDelete?.name}</span> do banco de dados, mas o usuário de autenticação permanecerá.
+                            Esta a├º├úo ├® <span className="font-bold text-destructive">irrevers├¡vel</span> e excluir├í permanentemente a barbearia <span className='font-bold'>{shopToDelete?.name}</span> do banco de dados, mas o usu├írio de autentica├º├úo permanecer├í.
                         </AlertDialogDescription>
                         <div className="space-y-2 pt-2">
                             <Label htmlFor="delete-confirm">Para confirmar, digite "<span className="font-bold">excluir</span>" abaixo:</Label>
@@ -879,3 +806,4 @@ export default function BarbershopsPage() {
         </div>
     );
 }
+

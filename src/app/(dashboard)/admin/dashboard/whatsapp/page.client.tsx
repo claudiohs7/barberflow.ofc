@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertCircle, CheckCircle2, Loader2, PhoneOff, PlugZap, QrCode, RefreshCcw } from "lucide-react";
 import Image from "next/image";
 
@@ -87,6 +87,7 @@ export default function WhatsAppPage() {
   const [isValidating, setIsValidating] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isMissingInstanceDialogOpen, setIsMissingInstanceDialogOpen] = useState(false);
   const [qrGeneratedAt, setQrGeneratedAt] = useState<number | null>(null);
   const statusRef = useRef<WhatsAppStatus | null | undefined>(barbershop?.whatsappStatus);
 
@@ -179,11 +180,21 @@ export default function WhatsAppPage() {
         description: json.message || "Conexão validada com a WhatsApp.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao validar",
-        description: error?.message || "Tente novamente.",
-      });
+      const msg: string = error?.message || "";
+      const normalized = msg.toLowerCase();
+      if (
+        normalized.includes("instância bitsafira não configurados") ||
+        normalized.includes("instancia bitsafira nao configurados") ||
+        normalized.includes("token ou id da instância bitsafira")
+      ) {
+        setIsMissingInstanceDialogOpen(true);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao validar",
+          description: msg || "Tente novamente.",
+        });
+      }
     } finally {
       setIsValidating(false);
     }
@@ -458,6 +469,33 @@ export default function WhatsAppPage() {
           ) : (
             <p className="text-sm text-muted-foreground">Gere ou valide para exibir o QR Code.</p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isMissingInstanceDialogOpen} onOpenChange={setIsMissingInstanceDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Instância não configurada</DialogTitle>
+            <DialogDescription>
+              Clique em <strong>Conectar</strong> para criar a instância BitSafira e gerar o QR Code.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsMissingInstanceDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setIsMissingInstanceDialogOpen(false);
+                handleConnect();
+              }}
+              disabled={isConnecting}
+              className="gap-2"
+            >
+              {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Conectar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

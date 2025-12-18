@@ -1,9 +1,7 @@
-﻿import { NextResponse } from "next/server";
-import {
-  getBarbershopBySlugOrId,
-  updateBarbershop,
-  deleteBarbershop,
-} from "@/server/db/repositories/barbershops";
+import { NextResponse } from "next/server";
+import { verifyAccessToken } from "@/lib/jwt";
+import { deleteBarbershopFully } from "@/server/services/barbershop-deletion";
+import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
 
 interface Params {
   params: {
@@ -62,16 +60,27 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const { id } = params || {};
   if (!id) {
     return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
   }
   try {
-    await deleteBarbershop(id);
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    const payload = token ? verifyAccessToken(token) : null;
+    if (!payload || typeof payload === "string") {
+      return NextResponse.json({ error: "Token inválido ou expirado." }, { status: 401 });
+    }
+    if ((payload as any).role !== "SUPERADMIN") {
+      return NextResponse.json({ error: "Apenas Superadmins podem excluir barbearias." }, { status: 403 });
+    }
+
+    await deleteBarbershopFully(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/barbershops/[id] error:", error);
-    return NextResponse.json({ error: "Erro ao excluir barbearia" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Erro ao excluir barbearia" }, { status: 500 });
   }
 }
+
