@@ -7,7 +7,7 @@ import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/ba
 
 export async function POST(request: NextRequest) {
   try {
-    const { barbershopId, description } = await request.json();
+    const { barbershopId } = await request.json();
 
     if (!barbershopId) {
       return NextResponse.json(
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseDescription = String(description ?? "").trim() || `Instancia BarberFlow - ${barbershop.name || barbershop.id}`;
-    const emailTag = barbershop.email ? ` - ${barbershop.email}` : "";
-    const finalDescription = `${baseDescription}${emailTag}`;
+    const instanceDescription = barbershop.email
+      ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
+      : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
 
     const bitSafiraToken = barbershop.bitSafiraToken || process.env.BITSAFIRA_TOKEN;
     if (!bitSafiraToken) {
@@ -34,10 +34,15 @@ export async function POST(request: NextRequest) {
     }
 
     const bitSafira = getBitSafiraApiClient(bitSafiraToken);
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/bitsafira/webhook`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      request.nextUrl.origin;
+    const webhookUrl = `${baseUrl.replace(/\/$/, "")}/api/webhooks/bitsafira`;
 
     const createPayload: CreateInstancePayload = {
-      descricao: finalDescription,
+      descricao: instanceDescription,
       urlWebhook: webhookUrl,
     };
     console.log("Payload para criar instancia:", createPayload);

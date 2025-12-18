@@ -35,6 +35,14 @@ export async function POST(request: Request) {
     }
 
     const bitSafira = getBitSafiraApiClient(bitSafiraToken);
+    const appUrl = (process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      new URL(request.url).origin).replace(/\/$/, "");
+    const webhookUrl = `${appUrl}/api/webhooks/bitsafira`;
+    const instanceDescription = barbershop.email
+      ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
+      : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
 
     let instanceId = barbershop.bitsafiraInstanceId;
     let currentInstanceStatus = mapBitSafiraStatus(barbershop.whatsappStatus);
@@ -44,10 +52,14 @@ export async function POST(request: Request) {
     console.log(`[${barbershopId}] Iniciando conexao BitSafira. Instancia: ${instanceId || 'N/A'}, status: ${currentInstanceStatus}`);
 
     if (!instanceId) {
+      const instanceDescription = barbershop.email
+        ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
+        : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
+
       const createPayload: CreateInstancePayload = {
         id: "",
-        urlWebhook: "https://webhook.site",
-        descricao: `Instancia ${barbershop.name || 'BarberFlow'}-${barbershop.id}`,
+        urlWebhook: webhookUrl,
+        descricao: instanceDescription,
         token: bitSafiraToken,
       };
       console.log(`[${barbershopId}] Nenhuma instancia registrada. Criando nova instância. Payload:`, createPayload);
