@@ -1,6 +1,4 @@
 // src/app/api/bitsafira/message/send-message/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { SendMessagePayload, SendMessageResponse } from '@/lib/bitsafira/types';

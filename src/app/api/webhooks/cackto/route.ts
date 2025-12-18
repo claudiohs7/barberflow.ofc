@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { addDays, differenceInDays } from 'date-fns';
 import {

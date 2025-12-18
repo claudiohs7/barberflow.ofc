@@ -1,6 +1,4 @@
 // src/app/api/bitsafira/auth/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { AuthPayload, AuthResponse } from '@/lib/bitsafira/types';

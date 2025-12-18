@@ -1,6 +1,4 @@
 // src/app/api/bitsafira/validate/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { GetInstanceInfoResponse } from '@/lib/bitsafira/types';

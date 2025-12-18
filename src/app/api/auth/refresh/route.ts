@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { findUserByRefreshToken, setRefreshToken } from "@/server/db/repositories/users";
 import { signAccessToken } from "@/lib/jwt";
+import { isSuperAdminEmail } from "@/lib/super-admin";
 
 export async function POST(req: Request) {
   try {
@@ -17,10 +18,11 @@ export async function POST(req: Request) {
     const newRefreshToken = crypto.randomUUID();
     await setRefreshToken(user.id, newRefreshToken);
 
+    const effectiveRole = isSuperAdminEmail(user.email) ? "SUPERADMIN" : user.role;
     const accessToken = signAccessToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: effectiveRole,
       name: user.name ?? null,
       phone: user.phone ?? null,
       avatarUrl: user.avatarUrl ?? null,
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
         id: user.id,
         email: user.email,
         name: user.name ?? null,
-        role: user.role,
+        role: effectiveRole,
         phone: user.phone ?? null,
         avatarUrl: user.avatarUrl ?? null,
       },

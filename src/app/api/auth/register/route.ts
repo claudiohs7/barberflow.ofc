@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     if (!body.email || !body.password) {
       return NextResponse.json({ error: "E-mail e senha são obrigatórios" }, { status: 400 });
     }
+
     const email = body.email.trim().toLowerCase();
     const created = await createUser({
       email,
@@ -24,9 +25,16 @@ export async function POST(req: Request) {
       phone: body.phone,
       role: body.role,
     });
-    return NextResponse.json({ data: { id: created.id, email: created.email, name: created.name, role: created.role } }, { status: 201 });
+
+    return NextResponse.json(
+      { data: { id: created.id, email: created.email, name: created.name, role: created.role } },
+      { status: 201 },
+    );
   } catch (error: any) {
     console.error("POST /api/auth/register error:", error);
-    return NextResponse.json({ error: "Não foi possível cadastrar" }, { status: 500 });
+    const message = error?.message || "Não foi possível cadastrar";
+    const isClientError = message.toLowerCase().includes("e-mail") || message.toLowerCase().includes("email");
+    return NextResponse.json({ error: message }, { status: isClientError ? 400 : 500 });
   }
 }
+

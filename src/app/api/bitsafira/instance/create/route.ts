@@ -1,10 +1,9 @@
-﻿// src/app/api/bitsafira/instance/create/route.ts
-'use server';
+// src/app/api/bitsafira/instance/create/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
-import { CreateInstancePayload, CreateInstanceResponse } from '@/lib/bitsafira/types';
-import { getBarbershopById, updateBarbershop } from '@/server/db/repositories/barbershops';
+import { NextRequest, NextResponse } from "next/server";
+import { getBitSafiraApiClient } from "@/lib/bitsafira/api";
+import type { CreateInstancePayload, CreateInstanceResponse } from "@/lib/bitsafira/types";
+import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/barbershops";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,8 +11,8 @@ export async function POST(request: NextRequest) {
 
     if (!barbershopId || !description) {
       return NextResponse.json(
-        { success: false, message: 'ID da barbearia e descricao da instancia sao obrigatorios.' },
-        { status: 400 }
+        { success: false, message: "ID da barbearia e descricao da instancia sao obrigatorios." },
+        { status: 400 },
       );
     }
 
@@ -21,16 +20,13 @@ export async function POST(request: NextRequest) {
     if (!barbershop) {
       return NextResponse.json(
         { success: false, message: `Barbearia com ID ${barbershopId} nao encontrada.` },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const bitSafiraToken = barbershop.bitSafiraToken || process.env.BITSAFIRA_TOKEN;
     if (!bitSafiraToken) {
-      return NextResponse.json(
-        { success: false, message: 'Token da BitSafira nao configurado.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: "Token da BitSafira nao configurado." }, { status: 400 });
     }
 
     const bitSafira = getBitSafiraApiClient(bitSafiraToken);
@@ -40,32 +36,38 @@ export async function POST(request: NextRequest) {
       descricao: description,
       urlWebhook: webhookUrl,
     };
-    console.log('Payload para criar instancia:', createPayload);
+    console.log("Payload para criar instancia:", createPayload);
 
     const createResult: CreateInstanceResponse = await bitSafira.createInstance(createPayload);
-    console.log('Resultado da criacao da instancia:', createResult);
+    console.log("Resultado da criacao da instancia:", createResult);
 
     if (createResult.status === 200 && createResult.dados) {
       await updateBarbershop(barbershopId, {
         bitsafiraInstanceId: createResult.dados.id,
-        whatsappStatus: 'DISCONNECTED',
+        whatsappStatus: "DISCONNECTED",
         qrCodeBase64: null,
       });
+
       return NextResponse.json(
-        { success: true, message: 'Instancia criada com sucesso.', data: createResult.dados },
-        { status: 200 }
-      );
-    } else {
-      return NextResponse.json(
-        { success: false, message: createResult.mensagem || 'Falha ao criar instancia BitSafira.' },
-        { status: createResult.status || 500 }
+        { success: true, message: "Instancia criada com sucesso.", data: createResult.dados },
+        { status: 200 },
       );
     }
-  } catch (error: any) {
-    console.error('Erro na API /api/bitsafira/instance/create:', error);
+
     return NextResponse.json(
-      { success: false, message: 'Erro interno no servidor.', error: error.message || 'Erro desconhecido.' },
-      { status: 500 }
+      { success: false, message: createResult.mensagem || "Falha ao criar instancia BitSafira." },
+      { status: createResult.status || 500 },
+    );
+  } catch (error: any) {
+    console.error("Erro na API /api/bitsafira/instance/create:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Erro interno no servidor.",
+        error: error.message || "Erro desconhecido.",
+      },
+      { status: 500 },
     );
   }
 }
+

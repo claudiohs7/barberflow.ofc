@@ -1,20 +1,19 @@
-﻿// src/app/api/bitsafira/instance/delete/[id]/route.ts
-'use server';
+// src/app/api/bitsafira/instance/delete/[id]/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
-import { DeleteInstancePayload, DeleteInstanceResponse } from '@/lib/bitsafira/types';
-import { getBarbershopById, updateBarbershop } from '@/server/db/repositories/barbershops';
+import { NextRequest, NextResponse } from "next/server";
+import { getBitSafiraApiClient } from "@/lib/bitsafira/api";
+import type { DeleteInstancePayload, DeleteInstanceResponse } from "@/lib/bitsafira/types";
+import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/barbershops";
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const instanceId = params.id;
-    const barbershopId = request.nextUrl.searchParams.get('barbershopId');
+    const barbershopId = request.nextUrl.searchParams.get("barbershopId");
 
     if (!instanceId || !barbershopId) {
       return NextResponse.json(
-        { success: false, message: 'ID da instancia e ID da barbearia sao obrigatorios.' },
-        { status: 400 }
+        { success: false, message: "ID da instancia e ID da barbearia sao obrigatorios." },
+        { status: 400 },
       );
     }
 
@@ -22,16 +21,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!barbershop) {
       return NextResponse.json(
         { success: false, message: `Barbearia com ID ${barbershopId} nao encontrada.` },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const bitSafiraToken = barbershop.bitSafiraToken || process.env.BITSAFIRA_TOKEN;
     if (!bitSafiraToken) {
-      return NextResponse.json(
-        { success: false, message: 'Token da BitSafira nao configurado.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: "Token da BitSafira nao configurado." }, { status: 400 });
     }
 
     const bitSafira = getBitSafiraApiClient(bitSafiraToken);
@@ -39,29 +35,34 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     const deletePayload: DeleteInstancePayload = { id: instanceId };
     const deleteResult: DeleteInstanceResponse = await bitSafira.deleteInstance(deletePayload);
-    console.log('Resultado da exclusao da instancia:', deleteResult);
+    console.log("Resultado da exclusao da instancia:", deleteResult);
 
     if (deleteResult.status === 200) {
       await updateBarbershop(barbershopId, {
         bitsafiraInstanceId: null,
-        whatsappStatus: 'DISCONNECTED',
+        whatsappStatus: "DISCONNECTED",
         qrCodeBase64: null,
       });
       return NextResponse.json(
         { success: true, message: `Instancia ${instanceId} excluida com sucesso.` },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     return NextResponse.json(
-      { success: false, message: deleteResult.mensagem || 'Falha ao excluir instancia.' },
-      { status: deleteResult.status || 500 }
+      { success: false, message: deleteResult.mensagem || "Falha ao excluir instancia." },
+      { status: deleteResult.status || 500 },
     );
   } catch (error: any) {
-    console.error('Erro na API /api/bitsafira/instance/delete/[id]:', error);
+    console.error("Erro na API /api/bitsafira/instance/delete/[id]:", error);
     return NextResponse.json(
-      { success: false, message: 'Erro interno no servidor.', error: error.message || 'Erro desconhecido.' },
-      { status: 500 }
+      {
+        success: false,
+        message: "Erro interno no servidor.",
+        error: error.message || "Erro desconhecido.",
+      },
+      { status: 500 },
     );
   }
 }
+

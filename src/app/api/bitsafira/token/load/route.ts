@@ -1,8 +1,8 @@
 // src/app/api/bitsafira/token/load/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getBarbershopById } from '@/server/db/repositories/barbershops';
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {

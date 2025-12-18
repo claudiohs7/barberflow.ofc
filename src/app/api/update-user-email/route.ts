@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 
 // A inicialização do 'firebase-admin' foi removida para corrigir falhas de build.

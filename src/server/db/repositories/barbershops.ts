@@ -14,7 +14,7 @@ type BarbershopCreateInput = {
   ownerId?: string;
   plan?: "Básico" | "Premium";
   status?: "Ativa" | "Inativa";
-  expiryDate?: Date | null;
+  expiryDate?: Date | string | null;
   address?: Address;
   operatingHours?: OperatingHour[];
   logoUrl?: string;
@@ -35,6 +35,13 @@ function mapPlan(plan?: string): "BASIC" | "PREMIUM" {
 
 function normalizeCpfCnpj(value?: string) {
   return (value || "").replace(/\D/g, "");
+}
+
+function normalizeDate(value?: Date | string | null) {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 async function findExistingBarbershopByCpfCnpj(normalizedCpfCnpj: string, excludeId?: string) {
@@ -84,7 +91,9 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
 }
 
 export async function createBarbershop(data: BarbershopCreateInput) {
+  const barbershopId = data.id || crypto.randomUUID();
   const normalizedCpfCnpj = normalizeCpfCnpj(data.cpfCnpj);
+  const expiryDate = normalizeDate(data.expiryDate);
   if (normalizedCpfCnpj) {
     const existing = await findExistingBarbershopByCpfCnpj(normalizedCpfCnpj);
     if (existing) {
@@ -94,7 +103,7 @@ export async function createBarbershop(data: BarbershopCreateInput) {
 
   const created = await prisma.barbershop.create({
     data: {
-      id: data.id,
+      id: barbershopId,
       name: data.name,
       legalName: data.legalName,
       cpfCnpj: normalizedCpfCnpj || data.cpfCnpj,
@@ -104,7 +113,7 @@ export async function createBarbershop(data: BarbershopCreateInput) {
       ownerId: data.ownerId,
       plan: mapPlan(data.plan) as any,
       status: data.status,
-      expiryDate: data.expiryDate ?? undefined,
+      expiryDate,
       addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
       operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
       logoUrl: data.logoUrl,
@@ -130,6 +139,8 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
     }
   }
 
+  const expiryDate = normalizeDate(data.expiryDate);
+
   const updated = await prisma.barbershop.update({
     where: { id },
     data: {
@@ -142,7 +153,7 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
       ownerId: data.ownerId,
       plan: data.plan ? mapPlan(data.plan) : undefined,
       status: data.status,
-      expiryDate: data.expiryDate,
+      expiryDate,
       addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
       operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
       logoUrl: data.logoUrl,

@@ -1,6 +1,4 @@
 // src/app/api/bitsafira/verify-number/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { VerifyNumberPayload, VerifyNumberResponse } from '@/lib/bitsafira/types';

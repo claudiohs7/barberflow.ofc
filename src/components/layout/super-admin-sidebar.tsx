@@ -20,7 +20,6 @@ import {
   Bell,
   Webhook,
   LogOut,
-  Combine,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -56,12 +55,11 @@ export function SuperAdminSidebar() {
     {
       href: '/super-admin/dashboard/integrations',
       label: 'Integrações',
-      icon: Combine,
+      icon: Webhook,
     },
   ];
 
   const handleSignOut = () => {
-    if (!auth) return;
     signOut()
       .then(() => {
         try {
@@ -110,7 +108,7 @@ export function SuperAdminSidebar() {
                   className="flex justify-between items-center w-full"
                 >
                   <div className="flex items-center gap-2">
-                    <item.icon />
+                    {item.icon ? <item.icon /> : null}
                     <span>{item.label}</span>
                   </div>
                 </Link>

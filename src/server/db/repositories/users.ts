@@ -15,9 +15,15 @@ export async function findUserByEmail(email: string) {
 }
 
 export async function createUser(data: CreateUserInput) {
+  const existing = await findUserByEmail(data.email);
+  if (existing) {
+    throw new Error("E-mail já está em uso.");
+  }
+
   const passwordHash = await bcrypt.hash(data.password, 12);
   return prisma.user.create({
     data: {
+      id: crypto.randomUUID(),
       email: data.email.toLowerCase(),
       name: data.name,
       phone: data.phone,

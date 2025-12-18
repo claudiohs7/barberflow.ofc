@@ -22,6 +22,7 @@ type AnnouncementInput = {
 export async function createAnnouncement(input: AnnouncementInput) {
   const created = await prisma.announcement.create({
     data: {
+      id: crypto.randomUUID(),
       title: input.title || "Aviso do Sistema",
       content: input.content,
       createdByUserId: input.createdByUserId ?? undefined,

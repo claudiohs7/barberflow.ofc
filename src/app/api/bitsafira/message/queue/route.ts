@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBarbershopById } from "@/server/db/repositories/barbershops";
 
+export const dynamic = "force-dynamic";
+
 type QueueStatus = "pending" | "sent";
 
 export type QueueItem = {
