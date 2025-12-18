@@ -1,7 +1,7 @@
 // src/app/api/bitsafira/validate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
-import { GetInstanceInfoResponse } from '@/lib/bitsafira/types';
+import { CreateInstancePayload, GetInstanceInfoResponse } from '@/lib/bitsafira/types';
 import { getBarbershopById, updateBarbershop } from '@/server/db/repositories/barbershops';
 import {
   mapBitSafiraStatus,
@@ -45,6 +45,33 @@ export async function POST(request: NextRequest) {
     console.log('Resultado da validação de instância:', result);
 
     if (result.status === 200 && result.dados) {
+      const desiredDescription = barbershop.email
+        ? `${barbershop.name || 'BarberFlow'}-${barbershop.email}`
+        : `${barbershop.name || 'BarberFlow'}-${barbershop.id}`;
+      const currentDescription = (result.dados as any).descricao;
+
+      if (typeof currentDescription !== 'string' || currentDescription !== desiredDescription) {
+        try {
+          const baseUrl =
+            process.env.NEXT_PUBLIC_SITE_URL ||
+            process.env.NEXT_PUBLIC_APP_URL ||
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            request.nextUrl.origin;
+          const webhookUrl = `${baseUrl.replace(/\\/$/, '')}/api/webhooks/bitsafira`;
+
+          const updatePayload: CreateInstancePayload = {
+            id: bitsafiraInstanceId,
+            descricao: desiredDescription,
+            urlWebhook: webhookUrl,
+            token: bitSafiraToken,
+          };
+          const updateResponse = await bitSafira.createInstance(updatePayload);
+          console.log('Descricao da instancia atualizada:', updateResponse);
+        } catch (error: any) {
+          console.warn('Nao foi possivel atualizar descricao da instancia:', error?.message);
+        }
+      }
+
       const statusFromApi = extractBitSafiraStatus(result.dados);
       const normalizedStatus = mapBitSafiraStatus(statusFromApi);
       const qrCodeValue = normalizeQrCodeBase64(result.dados.qrCode || result.dados.qr);

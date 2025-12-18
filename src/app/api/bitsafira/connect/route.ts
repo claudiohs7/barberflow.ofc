@@ -52,10 +52,6 @@ export async function POST(request: Request) {
     console.log(`[${barbershopId}] Iniciando conexao BitSafira. Instancia: ${instanceId || 'N/A'}, status: ${currentInstanceStatus}`);
 
     if (!instanceId) {
-      const instanceDescription = barbershop.email
-        ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
-        : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
-
       const createPayload: CreateInstancePayload = {
         id: "",
         urlWebhook: webhookUrl,
@@ -80,6 +76,23 @@ export async function POST(request: Request) {
         const instanceInfoResponse = await bitSafira.getInstanceInfo(instanceId);
         if (instanceInfoResponse.status === 200 && instanceInfoResponse.dados) {
         const instanceInfo = instanceInfoResponse.dados;
+
+        const currentDescription = (instanceInfo as any).descricao;
+        if (typeof currentDescription !== "string" || currentDescription !== instanceDescription) {
+          try {
+            const updatePayload: CreateInstancePayload = {
+              id: instanceId,
+              urlWebhook: webhookUrl,
+              descricao: instanceDescription,
+              token: bitSafiraToken,
+            };
+            const updateResponse = await bitSafira.createInstance(updatePayload);
+            console.log(`[${barbershopId}] Descricao da instancia atualizada:`, updateResponse);
+          } catch (error: any) {
+            console.warn(`[${barbershopId}] Nao foi possivel atualizar descricao da instancia:`, error?.message);
+          }
+        }
+
         const statusFromInfo = extractBitSafiraStatus(instanceInfo);
         const normalizedInfoStatus = mapBitSafiraStatus(statusFromInfo);
         console.log(`[${barbershopId}] Instancia ${instanceId} encontrada. Status: ${statusFromInfo} (normalizado: ${normalizedInfoStatus})`);
