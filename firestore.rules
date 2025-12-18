@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isSuperAdmin() {
+      // UID for claudiohs@hotmail.com (Certifique-se de que este UID está correto para o seu super admin)
+      return isAuthenticated() && request.auth.uid == '9rXFYCgb4TbqNuoJHDqyEoTG2ck2';
+    }
+    function isOwner(barbershopId) {
+      // Verifica o campo ownerId dentro do documento da barbearia que JÁ EXISTE.
+      return isAuthenticated() && get(/databases/$(database)/documents/barbershops/$(barbershopId)).data.ownerId == request.auth.uid;
+    }
+    function isBarber(barbershopId) {
+        return exists(/databases/$(database)/documents/barbershops/$(barbershopId)/barbers/$(request.auth.uid));
+    }
+    function isClient() {
+        return exists(/databases/$(database)/documents/clients/$(request.auth.uid));
+    }
+
+    match /barbershops/{barbershopId} {
+      allow read: if true; // Qualquer um pode ler as informações das barbearias.
+
+      // Permite criar se o ownerId for o do usuário logado, ou se o usuário for Super Admin.
+      allow create: if (request.resource.data.ownerId == request.auth.uid) || isSuperAdmin();
+      
+      // Permite que apenas o proprietário da barbearia ou um super admin atualizem os dados.
+      allow update: if isOwner(barbershopId) || isSuperAdmin();
+
+      // Permite que apenas um super admin delete uma barbearia.
+      allow delete: if isSuperAdmin();
+
+      match /clients/{clientId} {
+        allow read, write: if isOwner(barbershopId) || isSuperAdmin();
+      }
+      match /barbers/{barberId} {
+        allow read: if true; // Qualquer um pode ler os barbeiros para agendamento
+        allow write: if isOwner(barbershopId) || isSuperAdmin();
+      }
+      match /services/{serviceId} {
+        allow read: if true; // Qualquer um pode ler os serviços para agendamento
+        allow write: if isOwner(barbershopId) || isSuperAdmin();
+      }
+      match /appointments/{appointmentId} {
+        // PERMITE que qualquer um leia os agendamentos para ver a disponibilidade
+        allow read: if true; 
+        // Permite que proprietários, barbeiros, clientes ou admins criem agendamentos
+        allow create: if isOwner(barbershopId) 
+                      || isBarber(barbershopId) 
+                      || isSuperAdmin() 
+                      || (isAuthenticated() && request.resource.data.clientId == request.auth.uid);
+        // Permite que clientes, donos, barbeiros e admins atualizem ou cancelem agendamentos
+        allow update, delete: if isOwner(barbershopId) 
+                              || isBarber(barbershopId)
+                              || isSuperAdmin()
+                              || (isAuthenticated() && get(/databases/$(database)/documents/barbershops/$(barbershopId)/appointments/$(appointmentId)).data.clientId == request.auth.uid);
+      }
+      match /expenses/{expenseId} {
+        // Permite ler e escrever despesas se for o dono ou super admin.
+        allow get, list, write: if isOwner(barbershopId) || isSuperAdmin();
+      }
+    }
+
+    match /clients/{userId} {
+      // Permite que qualquer usuário autenticado leia e escreva em qualquer perfil de cliente.
+      // Isso é necessário para que os administradores da barbearia possam adicionar/editar clientes.
+      // A lógica de negócio na aplicação deve garantir que um usuário só edite o que é permitido.
+      allow read, write: if isAuthenticated();
+    }
+
+    // === NOVA ESTRUTURA DE SUPORTE ===
+    match /support_tickets/{ticketId} {
+      // Qualquer usuário autenticado pode criar tickets
+      allow create: if isAuthenticated();
+      // Usuário pode ver seus próprios tickets + admins veem todos
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy || 
+        isSuperAdmin()
+      );
+      // Apenas admins podem atualizar status/atribuir tickets
+      allow update: if isSuperAdmin();
+      // Apenas o criador ou admins podem excluir tickets
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy || 
+        isSuperAdmin()
+      );
+      // Permite que o super admin liste todos os tickets.
+      // Permite que usuários autenticados listem apenas os tickets da sua barbearia ou os que eles criaram.
+      allow list: if isSuperAdmin() || (isAuthenticated() && request.query.where.createdBy == request.auth.uid) || (isAuthenticated() && request.query.where.barbershopId == request.auth.uid);
+      // Respostas dentro do ticket
+      match /responses/{responseId} {
+        // Criar resposta: dono do ticket ou admin
+        allow create: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/support_tickets/$(ticketId)).data.createdBy ||
+          isSuperAdmin()
+        );
+        // Ler/Listar respostas: dono do ticket ou admin
+        allow read: if isAuthenticated() && (
+          request.auth.uid == get(/databases/$(database)/documents/support_tickets/$(ticketId)).data.createdBy ||
+          isSuperAdmin()
+        );
+        // Apenas admins podem editar/excluir respostas
+        allow update, delete: if isSuperAdmin();
+      }
+    }
+
+    match /system_messages/{messageId} {
+      // Permite que apenas usuários autenticados leiam os system messages.
+      allow read: if isAuthenticated();
+      // Permite que apenas o super admin escreva/edite os system messages.
+      allow write: if isSuperAdmin();
+    }
+  }
+}

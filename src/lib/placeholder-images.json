@@ -1,0 +1,52 @@
+{
+  "placeholderImages": [
+    {
+      "id": "barber-hero",
+      "description": "A stylish and modern barbershop interior.",
+      "imageUrl": "https://images.unsplash.com/photo-1622288432453-24c65074a5f4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "barbershop interior"
+    },
+    {
+      "id": "barber-tools",
+      "description": "A collection of professional barber tools on a wooden surface.",
+      "imageUrl": "https://images.unsplash.com/photo-1599351431613-18ef1fdd27e1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxiYXJiZXIlMjB0b29sc3xlbnwwfHx8fDE3NjI1NDk5NjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "barber tools"
+    },
+    {
+      "id": "client-scheduling",
+      "description": "A person using a smartphone to schedule an appointment.",
+      "imageUrl": "https://images.unsplash.com/photo-1470434767159-ac7bf1b43351?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBwaG9uZXxlbnwwfHx8fDE3NjI1MDgyMTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person phone"
+    },
+    {
+      "id": "admin-dashboard-ui",
+      "description": "A clean and modern user interface for a dashboard.",
+      "imageUrl": "https://images.unsplash.com/photo-1584301952952-8544e5ae7a26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8ZGFzaGJvYXJkJTIwdWl8ZW58MHx8fHwxNzYyNTcwMjA2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dashboard ui"
+    },
+    {
+      "id": "avatar1",
+      "description": "Portrait of a smiling man.",
+      "imageUrl": "https://images.unsplash.com/photo-1624395213043-fa2e123b2656?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjI1MzE0Njd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "avatar2",
+      "description": "Portrait of a smiling woman.",
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjI0NTg3Mjl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "avatar3",
+      "description": "Portrait of a person.",
+      "imageUrl": "https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjI0NzE2NDF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "avatar4",
+      "description": "Portrait of another person.",
+      "imageUrl": "https://images.unsplash.com/photo-1637321709288-82692530f086?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bWFuJTIwcGVyc29ufGVufDB8fHx8MTc2MjU3MDMxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man person"
+    }
+  ]
+}

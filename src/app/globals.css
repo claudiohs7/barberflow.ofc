@@ -1,0 +1,106 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400&display=optional');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 223 23% 12%;
+    --foreground: 0 0% 98%;
+    --card: 222 23% 16%;
+    --card-foreground: 0 0% 98%;
+    --popover: 223 23% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 210 100% 56%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 222 23% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 222 23% 18%;
+    --muted-foreground: 220 9% 55%;
+    --accent: 210 100% 56%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 23% 22%;
+    --input: 222 23% 22%;
+    --ring: 210 100% 56%;
+    --chart-1: 210 100% 56%;
+    --chart-2: 174 100% 29%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.5rem;
+    --sidebar-background: 223 23% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 210 100% 56%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 222 23% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 222 23% 22%;
+    --sidebar-ring: 210 100% 56%;
+  }
+
+  .dark {
+    --background: 223 23% 12%;
+    --foreground: 0 0% 98%;
+    --card: 222 23% 16%;
+    --card-foreground: 0 0% 98%;
+    --popover: 223 23% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 210 100% 56%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 222 23% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 222 23% 18%;
+    --muted-foreground: 220 9% 55%;
+    --accent: 210 100% 56%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 23% 22%;
+    --input: 222 23% 22%;
+    --ring: 210 100% 56%;
+    --chart-1: 210 100% 56%;
+    --chart-2: 174 100% 29%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 223 23% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 210 100% 56%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 222 23% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 222 23% 22%;
+    --sidebar-ring: 210 100% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+    .bg-grid-zinc-800 {
+        background-image:
+            linear-gradient(to bottom, transparent 1px, hsl(var(--card)) 1px),
+            linear-gradient(to right, transparent 1px, hsl(var(--card)) 1px);
+        background-size: 30px 30px;
+    }
+
+    @keyframes shimmer {
+        0%, 100% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
+    }
+}

@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model announcement {
+  id              String      @id
+  barbershopId    String?
+  createdByUserId String?
+  title           String
+  content         String      @db.Text
+  createdAt       DateTime    @default(now())
+  barbershop      barbershop? @relation(fields: [barbershopId], references: [id], map: "Announcement_barbershopId_fkey")
+  user            user?       @relation(fields: [createdByUserId], references: [id], map: "Announcement_createdByUserId_fkey")
+
+  @@index([barbershopId], map: "Announcement_barbershopId_fkey")
+  @@index([createdByUserId], map: "Announcement_createdByUserId_fkey")
+}
+
+model appointment {
+  id                 String               @id @default(cuid())
+  barbershopId       String
+  barberId           String?
+  clientId           String?
+  clientName         String?
+  clientPhone        String?              @db.VarChar(50)
+  status             AppointmentStatus    @default(CONFIRMED)
+  startTime          DateTime
+  endTime            DateTime
+  totalDuration      Int?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  barber             barber?              @relation(fields: [barberId], references: [id], map: "Appointment_barberId_fkey")
+  barbershop         barbershop           @relation(fields: [barbershopId], references: [id], map: "Appointment_barbershopId_fkey")
+  client             client?              @relation(fields: [clientId], references: [id], map: "Appointment_clientId_fkey")
+  services           appointmentservice[]
+  whatsappMessageQueue whatsappmessagequeue[]
+
+  @@index([barberId], map: "Appointment_barberId_fkey")
+  @@index([barbershopId], map: "Appointment_barbershopId_fkey")
+  @@index([clientId], map: "Appointment_clientId_fkey")
+}
+
+model appointmentservice {
+  appointmentId String
+  serviceId     String
+  agreedPrice   Decimal     @default(0.00) @db.Decimal(10, 2)
+  appointment   appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade, map: "AppointmentService_appointmentId_fkey")
+  service       service     @relation(fields: [serviceId], references: [id], onDelete: Cascade, map: "AppointmentService_serviceId_fkey")
+
+  @@id([appointmentId, serviceId])
+  @@index([serviceId], map: "AppointmentService_serviceId_fkey")
+}
+
+model barber {
+  id            String          @id @default(cuid())
+  userId        String?
+  barbershopId  String
+  name          String
+  email         String?
+  phone         String?         @db.VarChar(50)
+  avatarUrl     String?         @db.LongText
+  scheduleJson  Json?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  appointment   appointment[]
+  barbershop    barbershop      @relation(fields: [barbershopId], references: [id], map: "Barber_barbershopId_fkey")
+  user          user?           @relation(fields: [userId], references: [id], map: "Barber_userId_fkey")
+  services      barberservice[]
+
+  @@index([barbershopId], map: "Barber_barbershopId_fkey")
+  @@index([userId], map: "Barber_userId_fkey")
+}
+
+model barberservice {
+  barberId        String
+  serviceId       String
+  durationMinutes Int?
+  barber          barber  @relation(fields: [barberId], references: [id], onDelete: Cascade, map: "BarberService_barberId_fkey")
+  service         service @relation(fields: [serviceId], references: [id], onDelete: Cascade, map: "BarberService_serviceId_fkey")
+
+  @@id([barberId, serviceId])
+  @@index([serviceId], map: "BarberService_serviceId_fkey")
+}
+
+model barbershop {
+  id                    String            @id
+  name                  String
+  legalName             String?
+  cpfCnpj               String?           @db.VarChar(50)
+  email                 String?
+  phone                 String?           @db.VarChar(50)
+  description           String?           @db.Text
+  ownerId               String?
+  plan                  BarbershopPlan    @default(BASIC)
+  status                String?           @db.VarChar(50)
+  expiryDate            DateTime?
+  addressJson           Json?
+  operatingHoursJson    Json?
+  logoUrl               String?           @db.LongText
+  whatsappStatus        String?           @db.VarChar(100)
+  qrCodeBase64          String?           @db.Text
+  bitsafiraInstanceId   String?
+  bitSafiraToken        String?           @db.Text
+  whatsAppInstanceId    String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  bitsafiraInstanceData Json?
+  announcement          announcement[]
+  appointment           appointment[]
+  barber                barber[]
+  user                  user?             @relation(fields: [ownerId], references: [id], map: "Barbershop_ownerId_fkey")
+  client                client[]
+  expense               expense[]
+  messageTemplates      messagetemplate[]
+  service               service[]
+  ticket                ticket[]
+  webhook               webhook[]
+  whatsappMessageLogs   whatsappmessagelog[]
+  whatsappMessageQueue  whatsappmessagequeue[]
+
+  @@index([ownerId], map: "Barbershop_ownerId_fkey")
+}
+
+model client {
+  id                  String        @id @default(cuid())
+  userId              String?
+  barbershopId        String
+  name                String
+  phone               String?       @db.VarChar(50)
+  email               String?
+  notes               String?       @db.Text
+  favoriteBarbershops String?       @db.Text
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  appointment         appointment[]
+  barbershop          barbershop    @relation(fields: [barbershopId], references: [id], map: "Client_barbershopId_fkey")
+  user                user?         @relation(fields: [userId], references: [id], map: "Client_userId_fkey")
+
+  @@index([barbershopId], map: "Client_barbershopId_fkey")
+  @@index([userId], map: "Client_userId_fkey")
+}
+
+model expense {
+  id           String     @id @default(cuid())
+  barbershopId String
+  title        String
+  description  String?    @db.Text
+  amount       Decimal    @db.Decimal(10, 2)
+  category     String?    @db.VarChar(100)
+  expenseType  String?    @db.VarChar(50)
+  expenseDate  DateTime
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   barbershop @relation(fields: [barbershopId], references: [id], map: "Expense_barbershopId_fkey")
+
+  @@index([barbershopId], map: "Expense_barbershopId_fkey")
+}
+
+model messagetemplate {
+  id                  String     @id
+  barbershopId        String
+  name                String
+  content             String     @db.Text
+  enabled             Boolean    @default(true)
+  type                String     @db.VarChar(100)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  reminderHoursBefore Int?
+  barbershop          barbershop @relation(fields: [barbershopId], references: [id], map: "MessageTemplate_barbershopId_fkey")
+
+  @@index([barbershopId], map: "MessageTemplate_barbershopId_fkey")
+}
+
+model whatsappmessagelog {
+  id            String     @id @default(cuid())
+  barbershopId  String
+  appointmentId String?
+  clientName    String?
+  clientPhone   String?    @db.VarChar(50)
+  templateType  String?    @db.VarChar(100)
+  status        String     @db.VarChar(20)
+  message       String     @db.Text
+  sentAt        DateTime   @default(now())
+  details       String?    @db.Text
+  barbershop    barbershop @relation(fields: [barbershopId], references: [id], map: "WhatsappMessageLog_barbershopId_fkey")
+
+  @@index([barbershopId], map: "WhatsappMessageLog_barbershopId_fkey")
+  @@index([appointmentId], map: "WhatsappMessageLog_appointmentId_idx")
+  @@index([sentAt], map: "WhatsappMessageLog_sentAt_idx")
+}
+
+model whatsappmessagequeue {
+  id            String     @id @default(cuid())
+  barbershopId  String
+  appointmentId String
+  templateType  String     @db.VarChar(100)
+  scheduledFor  DateTime
+  status        String     @db.VarChar(20)
+  attempts      Int        @default(0)
+  lastError     String?    @db.Text
+  sentAt        DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  barbershop    barbershop @relation(fields: [barbershopId], references: [id], map: "WhatsappMessageQueue_barbershopId_fkey")
+  appointment   appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade, map: "WhatsappMessageQueue_appointmentId_fkey")
+
+  @@unique([appointmentId, templateType], map: "WhatsappMessageQueue_appointment_template_unique")
+  @@index([barbershopId], map: "WhatsappMessageQueue_barbershopId_fkey")
+  @@index([scheduledFor], map: "WhatsappMessageQueue_scheduledFor_idx")
+  @@index([status], map: "WhatsappMessageQueue_status_idx")
+}
+
+model service {
+  id                 String               @id @default(cuid())
+  barbershopId       String
+  name               String
+  description        String?              @db.Text
+  price              Decimal              @db.Decimal(10, 2)
+  durationMinutes    Int
+  active             Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  appointmentservice appointmentservice[]
+  barberservice      barberservice[]
+  barbershop         barbershop           @relation(fields: [barbershopId], references: [id], map: "Service_barbershopId_fkey")
+
+  @@index([barbershopId], map: "Service_barbershopId_fkey")
+}
+
+model ticket {
+  id              String           @id
+  barbershopId    String?
+  createdByUserId String?
+  status          TicketStatus     @default(OPEN)
+  subject         String
+  message         String?          @db.Text
+  priority        String?          @db.VarChar(50)
+  category        String?          @db.VarChar(50)
+  clientEmail     String?
+  clientName      String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  barbershop      barbershop?      @relation(fields: [barbershopId], references: [id], map: "Ticket_barbershopId_fkey")
+  user            user?            @relation(fields: [createdByUserId], references: [id], map: "Ticket_createdByUserId_fkey")
+  ticketresponse  ticketresponse[]
+
+  @@index([barbershopId], map: "Ticket_barbershopId_fkey")
+  @@index([createdByUserId], map: "Ticket_createdByUserId_fkey")
+}
+
+model ticketresponse {
+  id           String   @id
+  ticketId     String
+  authorUserId String?
+  message      String   @db.Text
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  user         user?    @relation(fields: [authorUserId], references: [id], map: "TicketResponse_authorUserId_fkey")
+  ticket       ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade, map: "TicketResponse_ticketId_fkey")
+
+  @@index([authorUserId], map: "TicketResponse_authorUserId_fkey")
+  @@index([ticketId], map: "TicketResponse_ticketId_fkey")
+}
+
+model user {
+  id             String           @id
+  email          String           @unique(map: "User_email_key")
+  name           String?
+  phone          String?          @db.VarChar(50)
+  role           UserRole         @default(CLIENT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  passwordHash   String?          @db.VarChar(255)
+  refreshToken   String?          @db.Text
+  avatarUrl      String?          @db.Text
+  announcement   announcement[]
+  barber         barber[]
+  barbershop     barbershop[]
+  client         client[]
+  ticket         ticket[]
+  ticketresponse ticketresponse[]
+}
+
+model webhook {
+  id           String     @id
+  barbershopId String
+  url          String     @db.VarChar(255)
+  name         String
+  events       String     @db.Text
+  lastStatus   String?    @db.VarChar(50)
+  lastUsed     DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   barbershop @relation(fields: [barbershopId], references: [id], map: "Webhook_barbershopId_fkey")
+
+  @@index([barbershopId], map: "Webhook_barbershopId_fkey")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  BARBER
+  CLIENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum BarbershopPlan {
+  BASIC
+  PREMIUM
+}
