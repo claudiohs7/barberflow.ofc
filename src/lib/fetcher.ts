@@ -28,8 +28,11 @@ function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
   // Absolute URL already provided
   if (/^https?:\/\//i.test(input)) return input;
 
-  const base =
-    (process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== "undefined" ? window.location.origin : "")) || "";
+  const isBrowser = typeof window !== "undefined";
+  const browserOrigin = isBrowser ? window.location.origin : "";
+  const port = process.env.PORT ?? "3000";
+  const fallbackHost = `http://localhost:${port}`;
+  const base = browserOrigin || process.env.NEXT_PUBLIC_SITE_URL || fallbackHost;
   const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/^\/|\/$/g, "");
   const normalizedBase = base.replace(/\/$/, "");
   const normalizedBasePath = basePath ? `/${basePath}` : "";

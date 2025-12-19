@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { capitalizeWords, formatCurrency, cn } from "@/lib/utils";
@@ -204,6 +204,7 @@ const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
 const [isDuplicateWarningOpen, setIsDuplicateWarningOpen] = useState(false);
 const [appointmentToEdit, setAppointmentToEdit] = useState<FullAppointment | null>(null);
+const [editStep, setEditStep] = useState<1 | 2>(1);
 const [appointmentToDelete, setAppointmentToDelete] = useState<FullAppointment | null>(null);
 const [appointmentToMessage, setAppointmentToMessage] = useState<FullAppointment | null>(null);
 const [manualMessage, setManualMessage] = useState("");
@@ -640,6 +641,7 @@ const deleteAppt = async (id: string) => {
 
   const handleEditClick = (appointment: FullAppointment) => {
     setAppointmentToEdit(appointment);
+    setEditStep(1);
     setEditBarberId(appointment.barberId);
     setEditServiceIds(new Set(appointment.services.map((s) => s.id)));
     setEditDate(appointment.startTime);
@@ -1280,73 +1282,77 @@ const deleteAppt = async (id: string) => {
           </div>
 
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Editar Agendamento</DialogTitle>
                 <DialogDescription>Altere serviços, barbeiro, data ou horário.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Cliente</Label>
-                  <Input value={appointmentToEdit?.clientName || ""} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>Serviços</Label>
-                  <div className="space-y-2 rounded-md border p-4 max-h-40 overflow-y-auto">
-                    {data.services
-                      ?.filter((service) => {
-                        const barber = data.barbers?.find((b) => b.id === editBarberId);
-                        return barber?.services?.some((s) => s.serviceId === service.id);
-                      })
-                      .map((service) => (
-                        <div key={service.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`edit-service-${service.id}`}
-                            checked={editServiceIds.has(service.id)}
-                            onCheckedChange={(checked) => {
-                              setEditServiceIds((prev) => {
-                                const newSet = new Set(prev);
-                                if (checked) newSet.add(service.id);
-                                else newSet.delete(service.id);
-                                return newSet;
-                              });
-                            }}
-                          />
-                          <Label htmlFor={`edit-service-${service.id}`} className="flex justify-between w-full cursor-pointer">
-                            <span>{service.name}</span>
-                            <span className="text-muted-foreground">{formatCurrency(service.price)}</span>
-                          </Label>
-                        </div>
-                      ))}
+              <div className="py-4 space-y-6">
+                {editStep === 1 && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Cliente</Label>
+                      <Input value={appointmentToEdit?.clientName || ""} disabled />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Serviços</Label>
+                      <div className="space-y-2 rounded-md border p-4 max-h-56 overflow-y-auto">
+                        {data.services
+                          ?.filter((service) => {
+                            const barber = data.barbers?.find((b) => b.id === editBarberId);
+                            return barber?.services?.some((s) => s.serviceId === service.id);
+                          })
+                          .map((service) => (
+                            <div key={service.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`edit-service-${service.id}`}
+                                checked={editServiceIds.has(service.id)}
+                                onCheckedChange={(checked) => {
+                                  setEditServiceIds((prev) => {
+                                    const newSet = new Set(prev);
+                                    if (checked) newSet.add(service.id);
+                                    else newSet.delete(service.id);
+                                    return newSet;
+                                  });
+                                }}
+                              />
+                              <Label htmlFor={`edit-service-${service.id}`} className="flex justify-between w-full cursor-pointer">
+                                <span>{service.name}</span>
+                                <span className="text-muted-foreground">{formatCurrency(service.price)}</span>
+                              </Label>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-custom-duration">Duração Total (minutos)</Label>
+                      <Input
+                        id="edit-custom-duration"
+                        type="number"
+                        value={editCustomDuration}
+                        onChange={(e) => setEditCustomDuration(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-barber">Barbeiro</Label>
+                      <Select value={editBarberId} onValueChange={setEditBarberId}>
+                        <SelectTrigger id="edit-barber">
+                          <SelectValue placeholder="Selecione o barbeiro" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {data.barbers?.map((barber) => (
+                            <SelectItem key={barber.id} value={barber.id}>
+                              {barber.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-custom-duration">Duração Total (minutos)</Label>
-                  <Input
-                    id="edit-custom-duration"
-                    type="number"
-                    value={editCustomDuration}
-                    onChange={(e) => setEditCustomDuration(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-barber">Barbeiro</Label>
-                  <Select value={editBarberId} onValueChange={setEditBarberId}>
-                    <SelectTrigger id="edit-barber">
-                      <SelectValue placeholder="Selecione o barbeiro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.barbers?.map((barber) => (
-                        <SelectItem key={barber.id} value={barber.id}>
-                          {barber.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Data & Horário</Label>
-                  <div className="flex flex-col md:flex-row gap-4">
+                )}
+
+                {editStep === 2 && (
+                  <div className="grid gap-4 md:grid-cols-[1fr,1fr]">
                     <Calendar
                       mode="single"
                       selected={editDate}
@@ -1356,33 +1362,58 @@ const deleteAppt = async (id: string) => {
                       classNames={calendarClassNames}
                       disabled={isDayDisabled}
                     />
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(60px,1fr))] gap-2 w-full max-h-96 overflow-y-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-h-[320px] overflow-y-auto">
                       {availableTimeSlotsEdit.map((time) => (
                         <Button
                           key={time}
                           variant={editTime === time ? "default" : "outline"}
                           onClick={() => setEditTime(time)}
-                          className="transition-colors"
+                          className="transition-colors w-full justify-center text-sm leading-tight py-2 min-w-[90px]"
                         >
                           {time}
                         </Button>
                       ))}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-                    Cancelar
-                  </Button>
-                </DialogClose>
-                <Button onClick={handleUpdateAppointment} className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-                  Salvar Alterações
-                </Button>
+              <DialogFooter className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {editStep === 1 ? "Etapa 1/2: Serviços e barbeiro" : "Etapa 2/2: Data e horário"}
+                </div>
+                <div className="flex gap-2">
+                  {editStep === 2 && (
+                    <Button
+                      variant="outline"
+                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                      onClick={() => setEditStep(1)}
+                    >
+                      Voltar
+                    </Button>
+                  )}
+                  {editStep === 1 ? (
+                    <Button
+                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                      onClick={() => setEditStep(2)}
+                    >
+                      Próximo
+                    </Button>
+                  ) : (
+                    <>
+                      <DialogClose asChild>
+                        <Button variant="outline" className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                          Cancelar
+                        </Button>
+                      </DialogClose>
+                      <Button onClick={handleUpdateAppointment} className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                        Salvar Alterações
+                      </Button>
+                    </>
+                  )}
+                </div>
               </DialogFooter>
             </DialogContent>
-      </Dialog>
+          </Dialog>
 
       {/* Duplicate Phone Warning Dialog */}
       <AlertDialog open={isDuplicateWarningOpen} onOpenChange={setIsDuplicateWarningOpen}>
@@ -1462,3 +1493,6 @@ const deleteAppt = async (id: string) => {
 function isWithinInterval(date: Date, interval: { start: Date; end: Date }) {
   return date >= interval.start && date <= interval.end;
 }
+
+
+
