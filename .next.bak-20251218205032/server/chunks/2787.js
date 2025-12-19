@@ -1,0 +1,1 @@
+"use strict";exports.id=2787,exports.ids=[2787],exports.modules={92787:(a,e,r)=>{r.r(e),r.d(e,{default:()=>t});let t=(0,r(68570).createProxy)(String.raw`/var/www/barberflow/src/app/(dashboard)/admin/dashboard/whatsapp-templates/page.client.tsx#default`)}};

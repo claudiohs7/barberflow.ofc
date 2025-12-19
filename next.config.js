@@ -1,6 +1,7 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  basePath: '/barberflow',
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
