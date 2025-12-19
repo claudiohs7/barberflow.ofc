@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Crown, Sparkles, Loader2, QrCode, Copy, CreditCard, HelpCircle, CheckCircle, Zap } from "lucide-react";
+import { Crown, Sparkles, CreditCard, HelpCircle, CheckCircle, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchJson } from "@/lib/fetcher";
 import type { Barbershop, PlanName } from "@/lib/definitions";
@@ -29,9 +29,6 @@ import { useBarbershopId } from "@/context/BarbershopIdContext";
 import { differenceInDays, startOfDay, format, isBefore } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
@@ -115,9 +112,6 @@ export default function SubscriptionPage() {
         };
     }, [isUpgradeModalOpen, barbershopId, fetchBarbershop, toast]);
 
-    const [isGeneratingPix, setIsGeneratingPix] = useState(false);
-    const [pixData, setPixData] = useState<{ qrCodeBase64: string; qrCode: string; paymentId: string; } | null>(null);
-
     useEffect(() => {
         if (typeof window === "undefined") return;
         const handler = (event: Event) => {
@@ -169,7 +163,7 @@ export default function SubscriptionPage() {
         return { text, days: daysRemaining, date: formattedDate, isTrial };
     }
 
-const handleUpgradeClick = () => {
+    const handleUpgradeClick = () => {
         const expiry = barbershopData?.expiryDate ? new Date(barbershopData.expiryDate) : null;
         const today = new Date();
         
@@ -189,59 +183,14 @@ const handleUpgradeClick = () => {
         }
         
         setIsUpgradeModalOpen(true);
-        setPixData(null);
-        setIsGeneratingPix(false);
-    }
+    };
 
-    const handleGeneratePix = async () => {
-        if (!barbershopId || !barbershopData?.cpfCnpj || !barbershopData?.email) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Dados da barbearia (ID, CPF/CNPJ ou Email) estão incompletos.' });
-            return;
-        }
-
-        setIsGeneratingPix(true);
-        setPixData(null);
-
-        try {
-            const response = await fetch('/api/create-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: upgradeCost,
-                    barbershopId: barbershopId,
-                    ownerData: {
-                        email: barbershopData.email,
-                        cpfCnpj: barbershopData.cpfCnpj,
-                        legalName: barbershopData.legalName || barbershopData.name,
-                    }
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao gerar o PIX.');
-            }
-
-            const data = await response.json();
-            setPixData({
-                qrCodeBase64: data.qrCodeBase64,
-                qrCode: data.qrCode,
-                paymentId: data.paymentId,
-            });
-
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Erro ao Gerar PIX', description: error.message });
-        } finally {
-            setIsGeneratingPix(false);
-        }
-    }
-
-    const copyPixCode = () => {
-        if (!pixData?.qrCode) return;
-        navigator.clipboard.writeText(pixData.qrCode).then(() => {
-        toast({ title: "Código PIX Copiado!", description: "Use 'Copia e Cola' no seu app do banco." });
+    const notifyPaymentDisabled = () => {
+        toast({
+            title: "Pagamento indisponivel",
+            description: "A integracao de pagamento via Mercado Pago/PIX esta desativada. Fale com o suporte para concluir o upgrade.",
         });
-    }
+    };
 
     if (isBarbershopIdLoading || isLoadingBarbershop) {
         return <div className="p-6">Carregando plano...</div>;
@@ -345,31 +294,15 @@ const handleUpgradeClick = () => {
                         </CardContent>
                     </Card>
                     
-                    {pixData ? (
-                        <div className="space-y-4 text-center">
-                            <p className="text-sm text-muted-foreground">Escaneie o QR Code abaixo com o app do seu banco:</p>
-                            <div className="flex justify-center">
-                                <Image src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="PIX QR Code" width={256} height={256} />
-                            </div>
-                            <div className="space-y-2">
-                            <Label htmlFor="pix-copy-paste" className="text-xs">Ou use o PIX Copia e Cola:</Label>
-                            <div className="flex gap-2">
-                                <Input id="pix-copy-paste" readOnly value={pixData.qrCode} className="text-xs h-8"/>
-                                <Button size="sm" onClick={copyPixCode}><Copy className="mr-2 h-3 w-3"/>Copiar</Button>
-                            </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground pt-2">Aguardando pagamento... A página será atualizada automaticamente.</p>
-                        </div>
-                    ) : (
-                        <Button onClick={handleGeneratePix} className="w-full" disabled={isGeneratingPix}>
-                            {isGeneratingPix ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <QrCode className="mr-2 h-4 w-4" />
-                            )}
-                            {isGeneratingPix ? 'Gerando PIX...' : 'Gerar QR Code PIX'}
+                    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4 text-center">
+                        <p className="font-semibold">Pagamento via PIX desativado</p>
+                        <p className="text-sm text-muted-foreground">
+                            A integracao com Mercado Pago/PIX foi removida. Entre em contato com o suporte para concluir o upgrade.
+                        </p>
+                        <Button className="w-full" variant="outline" onClick={notifyPaymentDisabled}>
+                            Falar com o suporte
                         </Button>
-                    )}
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>

@@ -14,10 +14,20 @@ export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 }
 
+export async function getUserById(id: string) {
+  if (!id) return null;
+  return prisma.user.findUnique({ where: { id } });
+}
+
 export async function createUser(data: CreateUserInput) {
   const existing = await findUserByEmail(data.email);
   if (existing) {
-    throw new Error("E-mail já está em uso.");
+    const ownedBarbershops = await prisma.barbershop.count({ where: { ownerId: existing.id } });
+    if (ownedBarbershops === 0) {
+      await prisma.user.delete({ where: { id: existing.id } });
+    } else {
+      throw new Error("E-mail já está em uso.");
+    }
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);

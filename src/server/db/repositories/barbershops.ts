@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+﻿import { Prisma } from "@prisma/client";
 import prisma from "../client";
 import type { Barbershop, Address, OperatingHour, MessageTemplate } from "@/lib/definitions";
 import { slugify } from "@/lib/utils";
@@ -12,7 +12,7 @@ type BarbershopCreateInput = {
   phone?: string;
   description?: string;
   ownerId?: string;
-  plan?: "Básico" | "Premium";
+  plan?: "B├ísico" | "Premium";
   status?: "Ativa" | "Inativa";
   expiryDate?: Date | string | null;
   address?: Address;
@@ -66,7 +66,7 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
     phone: shop.phone ?? undefined,
     description: shop.description ?? undefined,
     ownerId: shop.ownerId ?? undefined,
-    plan: shop.plan === "PREMIUM" ? "Premium" : "Básico",
+    plan: shop.plan === "PREMIUM" ? "Premium" : "B├ísico",
     status: shop.status as Barbershop["status"],
     expiryDate: shop.expiryDate?.toISOString(),
     address: (shop.addressJson as Address | null) ?? undefined,
@@ -97,7 +97,7 @@ export async function createBarbershop(data: BarbershopCreateInput) {
   if (normalizedCpfCnpj) {
     const existing = await findExistingBarbershopByCpfCnpj(normalizedCpfCnpj);
     if (existing) {
-      throw new Error("CPF/CNPJ já está cadastrado para outra barbearia.");
+      throw new Error("CPF/CNPJ j├í est├í cadastrado para outra barbearia.");
     }
   }
 
@@ -135,7 +135,7 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
   if (normalizedCpfCnpj) {
     const existing = await findExistingBarbershopByCpfCnpj(normalizedCpfCnpj, id);
     if (existing) {
-      throw new Error("CPF/CNPJ já está cadastrado para outra barbearia.");
+      throw new Error("CPF/CNPJ j├í est├í cadastrado para outra barbearia.");
     }
   }
 
@@ -218,3 +218,30 @@ export async function listBarbershopsByOwner(ownerId: string) {
 export async function deleteBarbershop(id: string) {
   await prisma.barbershop.delete({ where: { id } });
 }
+
+export async function deleteBarbershopAndData(barbershopId: string) {
+  await prisma.$transaction(async (tx) => {
+    // Things that reference barbershopId directly
+    await tx.whatsappmessagelog.deleteMany({ where: { barbershopId } });
+    await tx.webhook.deleteMany({ where: { barbershopId } });
+    await tx.messagetemplate.deleteMany({ where: { barbershopId } });
+    await tx.expense.deleteMany({ where: { barbershopId } });
+
+    // Tickets/announcements have optional barbershopId, but may still block deletion
+    await tx.ticket.deleteMany({ where: { barbershopId } });
+    await tx.announcement.deleteMany({ where: { barbershopId } });
+
+    // Appointments (and their join tables)
+    await tx.appointmentservice.deleteMany({ where: { appointment: { barbershopId } } });
+    await tx.whatsappmessagequeue.deleteMany({ where: { barbershopId } });
+    await tx.appointment.deleteMany({ where: { barbershopId } });
+
+    // People/services
+    await tx.barber.deleteMany({ where: { barbershopId } });
+    await tx.client.deleteMany({ where: { barbershopId } });
+    await tx.service.deleteMany({ where: { barbershopId } });
+
+    await tx.barbershop.delete({ where: { id: barbershopId } });
+  });
+}
+

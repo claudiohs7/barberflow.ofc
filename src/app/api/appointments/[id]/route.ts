@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { updateAppointment, deleteAppointment } from "@/server/db/repositories/appointments";
 import { removeReminderQueueForAppointment, syncReminderQueueForAppointment } from "@/server/reminders/reminder-queue";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id?: string }> };
 
 export async function PATCH(req: Request, { params }: Params) {
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "ID do agendamento é obrigatório." }, { status: 400 });
+  }
+
   try {
     const body = await req.json();
-    const data = await updateAppointment(params.id, {
+    const data = await updateAppointment(id, {
       ...body,
       startTime: body.startTime ? new Date(body.startTime) : undefined,
       endTime: body.endTime ? new Date(body.endTime) : undefined,
@@ -25,10 +30,15 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "ID do agendamento é obrigatório." }, { status: 400 });
+  }
+
   try {
-    await deleteAppointment(params.id);
+    await deleteAppointment(id);
     try {
-      await removeReminderQueueForAppointment(params.id);
+      await removeReminderQueueForAppointment(id);
     } catch (queueError) {
       console.warn("Falha ao remover lembrete do agendamento:", queueError);
     }

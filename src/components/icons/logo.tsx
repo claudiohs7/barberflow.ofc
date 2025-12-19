@@ -13,6 +13,7 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      suppressHydrationWarning
       {...props}
     >
       <circle cx="6" cy="6" r="3" />

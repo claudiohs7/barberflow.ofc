@@ -236,7 +236,7 @@ export default function WhatsappReportsPage() {
       );
     }
     return filtered;
-  }, [disparos, searchTerm, dateRange]);
+  }, [disparos, searchTerm, dateRange, selectedType]);
 
   const filteredQueue = useMemo(() => {
     let filtered = [...queueItems];
@@ -260,7 +260,7 @@ export default function WhatsappReportsPage() {
       );
     }
     return filtered;
-  }, [queueItems, searchTerm, dateRange]);
+  }, [queueItems, searchTerm, dateRange, selectedType]);
 
   const clearFilters = () => {
     setSearchTerm('');

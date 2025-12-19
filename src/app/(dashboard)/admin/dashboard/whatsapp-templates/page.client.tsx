@@ -81,9 +81,9 @@ export default function WhatsAppTemplatesPage() {
     [setMessageTemplates]
   );
 
-  const updateTemplate = (id: string, patch: Partial<TemplateForm>) => {
+  const updateTemplate = useCallback((id: string, patch: Partial<TemplateForm>) => {
     setTemplates((prev) => prev.map((tpl) => (tpl.id === id ? { ...tpl, ...patch } : tpl)));
-  };
+  }, []);
 
   const handleContentChange = useCallback(
     (id: string, value: string) => {

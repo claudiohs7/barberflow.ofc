@@ -114,23 +114,26 @@ export function AdminSidebar() {
       });
   };
 
-  const renderMenuItem = (item: any) => (
+  const renderMenuItem = (item: any) => {
+    const Icon = item.icon;
+    return (
     <SidebarMenuItem key={item.label}>
       <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={{ children: item.label }}>
         <Link href={item.href} className="flex justify-between items-center w-full">
           <div className="flex items-center gap-2">
-            <item.icon />
+            <Icon suppressHydrationWarning />
             <span>{item.label}</span>
           </div>
           {item.isPremium && barbershopData?.plan === "Básico" && (
             <div className="flex items-center gap-1 text-yellow-500">
-              <Crown className="h-3 w-3" />
+              <Crown className="h-3 w-3" suppressHydrationWarning />
             </div>
           )}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
+  };
 
   return (
     <Sidebar>
@@ -168,7 +171,7 @@ export function AdminSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut} tooltip={{ children: "Sair" }}>
-              <LogOut />
+              <LogOut suppressHydrationWarning />
               <span>Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

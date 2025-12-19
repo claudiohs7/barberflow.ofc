@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import Link from "next/link";
@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { capitalizeWords, formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -257,11 +257,23 @@ const handleCreateBarbershop = async () => {
 
     } catch (error: any) {
         console.error("Erro no cadastro:", error);
-        let description = "Ocorreu um erro ao tentar se cadastrar. Tente novamente.";
+        let description: ReactNode = "Ocorreu um erro ao tentar se cadastrar. Tente novamente.";
         if (error.message?.includes("E-mail")) {
-            description = "Este e-mail já está em uso. Tente fazer login ou use um e-mail diferente.";
-        } else if (error.message?.includes("CPF/CNPJ")) {
-            description = "Este CPF/CNPJ já está cadastrado em outra barbearia.";
+            description = "Este e-mail ja esta em uso. Tente fazer login ou use um e-mail diferente.";
+        } else if (error.message?.toLowerCase().includes("cpf/cnpj")) {
+            description = (
+                <div className="space-y-1">
+                    <p>CPF/CNPJ ja cadastrado, se nao foi voce, entre em contato com o suporte.</p>
+                    <a
+                        className="text-primary underline font-medium"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://wa.me/5531994371680?text=Preciso%20de%20ajuda%20com%20meu%20cadastro"
+                    >
+                        Falar no WhatsApp (+55 31 9 9437-1680)
+                    </a>
+                </div>
+            );
         }
         toast({
             variant: "destructive",

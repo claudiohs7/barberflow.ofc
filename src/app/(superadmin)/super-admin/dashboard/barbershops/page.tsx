@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, PlusCircle, FilterX, KeyRound, RefreshCw } from 'lucide-react';
+import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, FilterX, KeyRound, RefreshCw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -62,7 +62,7 @@ type SuperAdminBarbershop = {
     ownerId: string;
     email: string;
     phone: string;
-    plan: 'Básico' | 'Premium';
+    plan: 'Basico' | 'Premium';
     status: 'Ativa' | 'Inativa';
     expiryDate: string;
     registeredDate: string;
@@ -80,7 +80,7 @@ type SuperAdminBarbershop = {
 };
 
 const planPrices = {
-    'Básico': 49.90,
+    'Basico': 49.90,
     'Premium': 119.90
 };
 
@@ -91,6 +91,21 @@ export default function BarbershopsPage() {
     const [isLoadingBarbershops, setIsLoadingBarbershops] = useState(true);
     const [supportTickets, setSupportTickets] = useState<any[]>([]);
     const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+    const [displayedBarbershops, setDisplayedBarbershops] = useState<SuperAdminBarbershop[]>([]);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [shopToDelete, setShopToDelete] = useState<SuperAdminBarbershop | null>(null);
+    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
+    const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+    const [editingShop, setEditingShop] = useState<SuperAdminBarbershop | null>(null);
+    const [formState, setFormState] = useState<Partial<SuperAdminBarbershop & { password?: string }>>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterPlan, setFilterPlan] = useState('all');
+    const [isDeletingInstanceId, setIsDeletingInstanceId] = useState<string | null>(null);
+    const [isCreatingInstanceId, setIsCreatingInstanceId] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         setIsLoadingBarbershops(true);
@@ -107,7 +122,7 @@ export default function BarbershopsPage() {
             toast({
                 variant: "destructive",
                 title: "Erro ao carregar dados",
-                description: error.message || "Não foi possível carregar as barbearias.",
+                description: error.message || "No foi possvel carregar as barbearias.",
             });
         } finally {
             setIsLoadingBarbershops(false);
@@ -141,13 +156,13 @@ export default function BarbershopsPage() {
 
             return {
                 id: shop.id,
-                name: shop.name || 'Nome não definido',
+                name: shop.name || 'Nome no definido',
                 legalName: shop.legalName,
                 cpfCnpj: shop.cpfCnpj,
                 ownerId: shop.ownerId,
-                email: shop.email || 'E-mail não informado',
+                email: shop.email || 'E-mail no informado',
                 phone: shop.phone || '(00) 00000-0000',
-                plan: shop.plan || 'Básico',
+                plan: shop.plan || 'Basico',
                 status,
                 expiryDate: expiryDate ? format(expiryDate, 'dd/MM/yyyy') : 'N/A',
                 registeredDate: shop.createdAt ? format(new Date(shop.createdAt), 'dd/MM/yyyy') : 'N/A',
@@ -158,24 +173,6 @@ export default function BarbershopsPage() {
         });
     }, [rawBarbershops]);
 
-
-    const [displayedBarbershops, setDisplayedBarbershops] = useState<SuperAdminBarbershop[]>([]);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [shopToDelete, setShopToDelete] = useState<SuperAdminBarbershop | null>(null);
-    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
-    const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-
-    const [editingShop, setEditingShop] = useState<SuperAdminBarbershop | null>(null);
-
-    const [formState, setFormState] = useState<Partial<SuperAdminBarbershop & {password?: string}>>({});
-    
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [filterPlan, setFilterPlan] = useState('all');
 
     useEffect(() => {
         let filtered = allBarbershops;
@@ -224,11 +221,11 @@ export default function BarbershopsPage() {
                   return { ...prev, address: newAddress as SuperAdminBarbershop['address'] };
               });
             } else {
-                throw new Error(data.error || 'CEP não encontrado.');
+                throw new Error(data.error || 'CEP no encontrado.');
             }
           } catch (error) {
             console.error("Failed to fetch address:", error);
-            toast({ variant: "destructive", title: "Erro de CEP", description: "Não foi possível buscar o endereço." });
+            toast({ variant: "destructive", title: "Erro de CEP", description: "No foi possvel buscar o endereo." });
           }
         }
       };
@@ -273,17 +270,17 @@ export default function BarbershopsPage() {
 
     const confirmDelete = async () => {
         if (!shopToDelete) {
-            toast({ variant: "destructive", title: "Erro", description: "Nenhuma barbearia selecionada para exclusão." });
+            toast({ variant: "destructive", title: "Erro", description: "Nenhuma barbearia selecionada para excluso." });
             return;
         }
 
         try {
             await fetchJson(`/api/barbershops/${shopToDelete.id}`, { method: "DELETE" });
             setRawBarbershops(prev => prev!.filter(s => s.id !== shopToDelete.id));
-            toast({ title: "Barbearia Excluída!", description: `${shopToDelete.name} foi removida do banco de dados.` });
+            toast({ title: "Barbearia Excluda!", description: `${shopToDelete.name} foi removida do banco de dados.` });
         } catch (error: any) {
             console.error("Erro ao excluir barbearia:", error);
-            toast({ variant: "destructive", title: "Erro ao Excluir", description: error.message || "Não foi possível remover a barbearia do banco de dados." });
+            toast({ variant: "destructive", title: "Erro ao Excluir", description: error.message || "No foi possvel remover a barbearia do banco de dados." });
         } finally {
             setIsDeleteDialogOpen(false);
             setShopToDelete(null);
@@ -391,11 +388,7 @@ export default function BarbershopsPage() {
             const updatedShop = response.data;
             setRawBarbershops(prev => prev!.map(s => (s.id === updatedShop.id ? updatedShop : s)));
 
-            if (barbershopDocRef) {
-                await updateDoc(barbershopDocRef, updateData as Record<string, any>);
-            }
-
-            toast({ title: "Dados da Barbearia Salvos!", description: "As informações no banco de dados foram atualizadas." });
+                        toast({ title: "Dados da Barbearia Salvos!", description: "As informaes no banco de dados foram atualizadas." });
             if (typeof window !== "undefined") {
                 const barbershopUpdatePayload = { ...updatedShop, ownerId: updatedShop.ownerId };
                 window.dispatchEvent(new CustomEvent("barbershop-updated", { detail: barbershopUpdatePayload }));
@@ -405,7 +398,7 @@ export default function BarbershopsPage() {
                         JSON.stringify({ ...barbershopUpdatePayload, timestamp: Date.now() })
                     );
                 } catch (error) {
-                    console.warn("Não foi possível sincronizar a atualização entre abas:", error);
+                    console.warn("No foi possvel sincronizar a atualizao entre abas:", error);
                 }
             }
         } catch (error: any) {
@@ -413,7 +406,7 @@ export default function BarbershopsPage() {
             toast({
                 variant: "destructive",
                 title: "Erro ao Salvar",
-                description: error.message || "Não foi possível atualizar os dados da barbearia.",
+                description: error.message || "No foi possvel atualizar os dados da barbearia.",
             });
         } finally {
             setIsEditDialogOpen(false);
@@ -423,7 +416,7 @@ export default function BarbershopsPage() {
     
     const handleCreate = async () => {
         if (!formState.email || !formState.password || !formState.name) {
-            toast({ variant: "destructive", title: "Erro", description: "Email, senha e nome da barbearia são obrigatórios." });
+            toast({ variant: "destructive", title: "Erro", description: "Email, senha e nome da barbearia so obrigatrios." });
             return;
         }
         setIsSubmitting(true);
@@ -454,7 +447,7 @@ export default function BarbershopsPage() {
                     phone: formState.phone,
                     cpfCnpj: formState.cpfCnpj,
                     ownerId,
-                    plan: formState.plan || "Básico",
+                    plan: formState.plan || "Basico",
                     status: "Ativa",
                     expiryDate: trialEndDate.toISOString(),
                 }),
@@ -469,7 +462,7 @@ export default function BarbershopsPage() {
         } catch (error: any) {
             console.error("Erro ao criar barbearia:", error);
             const baseDescription = error.message?.includes("in use")
-                ? "Este e-mail já está em uso por outro proprietário."
+                ? "Este e-mail j est em uso por outro proprierio."
                 : "Ocorreu um erro ao criar a barbearia.";
             toast({ variant: "destructive", title: "Erro no Cadastro", description: baseDescription });
         } finally {
@@ -485,7 +478,7 @@ export default function BarbershopsPage() {
     
     // const handleUpdateAllBarbershops = async () => {
     //     // This function is no longer needed with the removal of API keys from the barbershop doc.
-    //     toast({ title: "Ação Descontinuada", description: "Esta função não é mais necessária." });
+    //     toast({ title: "Ao Descontinuada", description: "Esta funo no  mais necessria." });
     // };
 
     const getGoogleMapsLink = (address: Barbershop['address']) => {
@@ -511,82 +504,9 @@ export default function BarbershopsPage() {
                             <CardTitle>Gerenciar Barbearias</CardTitle>
                             <CardDescription>Visualize e edite todos os dados das barbearias cadastradas ({displayedBarbershops.length} de {allBarbershops.length})</CardDescription>
                         </div>
-                         <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setFormState({}); setIsAddDialogOpen(isOpen); }}>
-                            <DialogTrigger asChild>
-                                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Nova Barbearia</Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle>Cadastrar Nova Barbearia</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
-                                    <div className="grid gap-4">
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-email">Email do Proprietário</Label>
-                                            <Input id="add-email" name="email" type="email" value={formState.email || ''} onChange={(e) => setFormState(prev => ({...prev, email: e.target.value}))} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-password">Senha Provisória</Label>
-                                            <Input id="add-password" name="password" type="password" value={formState.password || ''} onChange={(e) => setFormState(prev => ({...prev, password: e.target.value}))} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="add-name">Nome da Barbearia</Label>
-                                            <Input id="add-name" name="name" value={formState.name || ''} onChange={handleFormChange} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="add-cpfCnpj">CPF/CNPJ</Label>
-                                            <Input id="add-cpfCnpj" name="cpfCnpj" value={formState.cpfCnpj || ''} onChange={handleCpfCnpjChange} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-legalName">Nome/Empresa (Razão Social)</Label>
-                                            <Input id="add-legalName" name="legalName" value={formState.legalName || ''} onChange={handleFormChange} />
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-2 col-span-1">
-                                                <Label htmlFor="add-cep">CEP</Label>
-                                                <Input id="add-cep" name="cep" value={formState.address?.cep || ''} onChange={handleAddressChange} maxLength={9} />
-                                            </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label htmlFor="add-street">Rua</Label>
-                                                <Input id="add-street" name="street" value={formState.address?.street || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                         <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-number">Número</Label>
-                                                <Input id="add-number" name="number" value={formState.address?.number || ''} onChange={handleAddressChange} />
-                                            </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label htmlFor="add-neighborhood">Bairro</Label>
-                                                <Input id="add-neighborhood" name="neighborhood" value={formState.address?.neighborhood || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-city">Cidade</Label>
-                                                <Input id="add-city" name="city" value={formState.address?.city || ''} onChange={handleAddressChange} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="add-state">Estado (UF)</Label>
-                                                <Input id="add-state" name="state" value={formState.address?.state || ''} onChange={handleAddressChange} />
-                                            </div>
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="add-phone">WhatsApp do Proprietário</Label>
-                                            <Input id="add-phone" name="phone" value={formState.phone || ''} onChange={handlePhoneChange} maxLength={15} />
-                                        </div>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button variant="outline">Cancelar</Button>
-                                    </DialogClose>
-                                    <Button onClick={handleCreate} disabled={isSubmitting}>
-                                        {isSubmitting ? 'Cadastrando...' : 'Salvar Barbearia'}
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                        <Button size="sm" variant="outline" className="gap-2" onClick={loadData}>
+                            <RefreshCw className="h-4 w-4" /> Atualizar
+                        </Button>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 pt-4">
                         <div className="relative flex-grow min-w-[200px]">
@@ -609,7 +529,7 @@ export default function BarbershopsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos os Planos</SelectItem>
-                                <SelectItem value="Básico">Básico</SelectItem>
+                                <SelectItem value="Basico">Basico</SelectItem>
                                 <SelectItem value="Premium">Premium</SelectItem>
                             </SelectContent>
                         </Select>
@@ -618,88 +538,137 @@ export default function BarbershopsPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                                <CardContent className="space-y-4">
                     {displayedBarbershops.map(shop => (
                         <div key={shop.id} className="border border-primary/50 rounded-lg p-4 space-y-4">
-                             <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-4">
-                                    <span className="font-mono text-sm text-muted-foreground pt-1">{shop.ownerId?.substring(0, 6)}...</span>
-                                    <div>
-                                      <h3 className="font-bold text-lg">{shop.name}</h3>
-                                      <p className="text-sm text-muted-foreground">{shop.legalName} - {shop.cpfCnpj}</p>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-lg">{shop.name}</h3>
+                                        <Badge variant="outline" className="text-xs">
+                                            {shop.plan && shop.plan.toLowerCase().startsWith("b") ? "Basico" : shop.plan}
+                                        </Badge>
+                                        <Badge variant={shop.status === "Ativa" ? "default" : "destructive"} className={shop.status === "Ativa" ? "bg-green-500/20 text-green-500 border-green-500/30" : ""}>
+                                            {shop.status}
+                                        </Badge>
                                     </div>
+                                    <p className="text-sm text-muted-foreground">{shop.legalName} - {shop.cpfCnpj}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {shop.phone}{" "}
+                                        <Button variant="link" size="sm" asChild className="p-0 h-auto text-green-500 hover:text-green-500/90">
+                                            <Link href={getWhatsAppLink(shop.phone)} target="_blank" rel="noopener noreferrer">
+                                                WhatsApp
+                                            </Link>
+                                        </Button>
+                                    </p>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Owner ID</p>
+                                    <p className="font-mono text-sm text-muted-foreground">{shop.ownerId}</p>
+                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Instancia</p>
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                        {shop.bitsafiraInstanceId ?? "Nao conectada"}
+                                    </Badge>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-3">
                                     <div className="flex items-start gap-3">
-                                        <MapPin className="h-4 w-4 mt-1 text-muted-foreground"/>
+                                        <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div className="flex-1">
-                                            <p className="text-sm font-medium">Endereço</p>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-sm text-muted-foreground">{shop.fullAddressString}</p>
-                                                <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                                                    <Link href={getGoogleMapsLink(shop.address)} target="_blank" rel="noopener noreferrer">
-                                                        Ver
-                                                    </Link>
-                                                </Button>
-                                            </div>
+                                            <p className="text-sm font-medium">Endereco</p>
+                                            <p className="text-sm text-muted-foreground">{shop.fullAddressString}</p>
+                                            <Button variant="link" size="sm" asChild className="p-0 h-auto">
+                                                <Link href={getGoogleMapsLink(shop.address)} target="_blank" rel="noopener noreferrer">
+                                                    Ver no mapa
+                                                </Link>
+                                            </Button>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <Mail className="h-4 w-4 mt-1 text-muted-foreground"/>
+                                        <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div>
-                                            <p className="text-sm font-medium">Email do Proprietário</p>
+                                            <p className="text-sm font-medium">E-mail do proprietario</p>
                                             <p className="text-sm text-muted-foreground">{shop.email}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-3">
-                                        <Smartphone className="h-4 w-4 mt-1 text-muted-foreground"/>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium">WhatsApp do Proprietário</p>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-sm text-muted-foreground">{shop.phone}</p>
-                                                <Button variant="link" size="sm" asChild className="p-0 h-auto text-green-500 hover:text-green-500/90">
-                                                    <Link href={getWhatsAppLink(shop.phone)} target="_blank" rel="noopener noreferrer">
-                                                        WhatsApp
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
+
                                 <div className="space-y-3">
-                                     <div className="flex items-start gap-3">
-                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground"/>
+                                    <div className="flex items-start gap-3">
+                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div>
                                             <p className="text-sm font-medium">Plano</p>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm text-muted-foreground font-semibold">
-                                                  {shop.plan}
-                                                </p>
-                                                <Badge variant={shop.status === 'Ativa' ? 'default' : 'destructive'} className={shop.status === 'Ativa' ? 'bg-green-500/20 text-green-500 border-green-500/30' : ''}>{shop.status}</Badge>
-                                            </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                {shop.plan && shop.plan.toLowerCase().startsWith("b") ? "Basico" : shop.plan}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground"/>
+                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div>
                                             <p className="text-sm font-medium">Data de Vencimento</p>
                                             <p className="text-sm text-muted-foreground">{shop.expiryDate}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground"/>
+                                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div>
                                             <p className="text-sm font-medium">Cadastrado em</p>
                                             <p className="text-sm text-muted-foreground">{shop.registeredDate}</p>
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <KeyRound className="h-4 w-4 mt-1 text-muted-foreground" />
+                                        <div className="flex-1 space-y-2">
+                                            <div>
+                                                <p className="text-sm font-medium">Instancia BitSafira</p>
+                                                {shop.bitsafiraPhone && (
+                                                    <p className="text-xs text-muted-foreground">Numero: {shop.bitsafiraPhone}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="outline" className="font-mono text-xs">
+                                                    {shop.bitsafiraInstanceId ?? "Nao conectada"}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {!shop.bitsafiraInstanceId && (
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="h-8"
+                                                        onClick={() => handleCreateInstance(shop)}
+                                                        disabled={isCreatingInstanceId === shop.id}
+                                                    >
+                                                        {isCreatingInstanceId === shop.id ? "Gerando..." : "Gerar nova instancia"}
+                                                    </Button>
+                                                )}
+                                                {shop.bitsafiraInstanceId && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8"
+                                                        onClick={() => handleDeleteInstance(shop)}
+                                                        disabled={isDeletingInstanceId === shop.id}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        {isDeletingInstanceId === shop.id ? "Removendo..." : "Excluir instancia"}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
                             <CardFooter className="p-0 pt-4 flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => handleEditClick(shop)}><Edit className="mr-2 h-4 w-4"/> Editar</Button>
-                                <Button variant="destructive" onClick={() => handleDeleteClick(shop)}><Trash2 className="mr-2 h-4 w-4"/> Excluir</Button>
+                                <Button variant="outline" onClick={() => handleEditClick(shop)}><Edit className="mr-2 h-4 w-4" /> Editar</Button>
+                                <Button variant="destructive" onClick={() => handleDeleteClick(shop)}><Trash2 className="mr-2 h-4 w-4" /> Excluir</Button>
                             </CardFooter>
                         </div>
                     ))}
@@ -711,7 +680,7 @@ export default function BarbershopsPage() {
                     <DialogHeader>
                         <DialogTitle>Editar Barbearia</DialogTitle>
                         <DialogDescription>
-                            Atualize os dados da barbearia {editingShop?.name} (Código: {editingShop?.ownerId})
+                            Atualize os dados da barbearia {editingShop?.name} (Cdigo: {editingShop?.ownerId})
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
@@ -721,7 +690,7 @@ export default function BarbershopsPage() {
                                 <Input id="name" name="name" value={formState.name || ''} onChange={handleFormChange} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="legalName">Nome/Empresa (Razão Social)</Label>
+                                <Label htmlFor="legalName">Nome/Empresa (Razo Social)</Label>
                                 <Input id="legalName" name="legalName" value={formState.legalName || ''} onChange={handleFormChange} />
                             </div>
                             <div className="space-y-2">
@@ -740,7 +709,7 @@ export default function BarbershopsPage() {
                             </div>
                              <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="number">Número</Label>
+                                    <Label htmlFor="number">Nmero</Label>
                                     <Input id="number" name="number" value={formState.address?.number || ''} onChange={handleAddressChange} />
                                 </div>
                                 <div className="space-y-2 col-span-2">
@@ -764,17 +733,17 @@ export default function BarbershopsPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email do Proprietário</Label>
+                                    <Label htmlFor="email">Email do Proprietrio</Label>
                                     <Input id="email" name="email" type="email" value={formState.email || ''} onChange={handleFormChange} disabled />
                                     <div className="flex items-start gap-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-300">
                                         <AlertCircleIcon className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className='text-xs'>
-                                            <p>A alteração do e-mail de login deve ser feita diretamente no Firebase Console para garantir a segurança.</p>
+                                            <p>A alterao do e-mail de login deve ser feita diretamente no Firebase Console para garantir a segurana.</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="phone">WhatsApp do Proprietário</Label>
+                                    <Label htmlFor="phone">WhatsApp do Propriio</Label>
                                     <Input id="phone" name="phone" value={formState.phone || ''} onChange={handlePhoneChange} maxLength={15} />
                                 </div>
                             </div>
@@ -795,14 +764,14 @@ export default function BarbershopsPage() {
                                     <Label>Plano</Label>
                                     <Select 
                                         value={formState.plan} 
-                                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'Básico' | 'Premium')}
+                                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'Basico' | 'Premium')}
                                         disabled={formState.status === 'Inativa'}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecione o plano" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Básico">Básico</SelectItem>
+                                            <SelectItem value="Basico">Basico</SelectItem>
                                             <SelectItem value="Premium">Premium</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -844,16 +813,16 @@ export default function BarbershopsPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancelar</Button>
                         </DialogClose>
-                        <Button onClick={handleSave}>Salvar Alterações</Button>
+                        <Button onClick={handleSave}>Salvar Alteraes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setDeleteConfirmationInput(''); setIsDeleteDialogOpen(isOpen);}}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
+                        <AlertDialogTitle>Voc tem certeza absoluta?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação é <span className="font-bold text-destructive">irreversível</span> e excluirá permanentemente a barbearia <span className='font-bold'>{shopToDelete?.name}</span> do banco de dados, mas o usuário de autenticação permanecerá.
+                            Esta ao  <span className="font-bold text-destructive">irreversvel</span> e excluir permanentemente a barbearia <span className='font-bold'>{shopToDelete?.name}</span> do banco de dados, mas o usurio de autenticao permanecer.
                         </AlertDialogDescription>
                         <div className="space-y-2 pt-2">
                             <Label htmlFor="delete-confirm">Para confirmar, digite "<span className="font-bold">excluir</span>" abaixo:</Label>
@@ -879,3 +848,9 @@ export default function BarbershopsPage() {
         </div>
     );
 }
+
+
+
+
+
+

@@ -326,3 +326,28 @@ enum BarbershopPlan {
   BASIC
   PREMIUM
 }
+
+model tutorialvideo {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  youtubeUrl  String   @db.VarChar(500)
+  youtubeId   String?  @db.VarChar(50)
+  targetEmail String?  @db.VarChar(255)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([targetEmail], map: "TutorialVideo_targetEmail_idx")
+  @@index([enabled], map: "TutorialVideo_enabled_idx")
+  @@index([createdAt], map: "TutorialVideo_createdAt_idx")
+}
+
+model siteappearance {
+  id                Int      @id @default(autoincrement())
+  homeHeroDesktopPath String? @db.VarChar(500)
+  homeHeroMobilePath  String? @db.VarChar(500)
+  updatedAt         DateTime @updatedAt
+
+  @@map("SiteAppearance")
+}

@@ -36,23 +36,31 @@ export async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): 
     credentials: init.credentials ?? "omit",
   });
 
+  const contentType = res.headers.get("content-type") || "";
+
   if (!res.ok) {
-    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      throw new Error(res.statusText || `Erro ${res.status}`);
+    }
 
     if (contentType.includes("application/json")) {
       try {
         const data = await res.json();
         const message = extractErrorMessage(data);
-        throw new Error(message || res.statusText || "Falha na requisição.");
+        throw new Error(message || res.statusText || "Falha na requisicao.");
       } catch (e: any) {
         if (e instanceof Error && e.message) throw e;
       }
     }
 
-    const text = await res.text();
-    throw new Error(text.trim() || res.statusText || "Falha na requisição.");
+    const textBody = await res.text();
+    const stripped = textBody.replace(/<[^>]+>/g, "").trim();
+    throw new Error(stripped || res.statusText || `Erro ${res.status}`);
   }
 
-  return res.json() as Promise<T>;
-}
+  if (contentType.includes("application/json")) {
+    return res.json() as Promise<T>;
+  }
 
+  return res.text() as unknown as T;
+}

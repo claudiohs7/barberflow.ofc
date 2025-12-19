@@ -101,7 +101,19 @@ export class BitSafiraApiClient {
 
   // Deletar uma instância
   async deleteInstance(payload: DeleteInstancePayload): Promise<DeleteInstanceResponse> {
-    return this.request<any>('DELETE', `/instancia/deletar`, payload);
+    // Documentado: DELETE /instancia/excluir com body { id }
+    const main = await this.request<any>('DELETE', '/instancia/excluir', payload);
+    if ([200, 201, 204, 404].includes(main.status || 0)) return main;
+
+    // Fallbacks que já vimos em ambientes anteriores
+    const tryDelete = await this.request<any>('DELETE', '/instancia/deletar', payload);
+    if ([200, 201, 204, 404].includes(tryDelete.status || 0)) return tryDelete;
+
+    const tryPost = await this.request<any>('POST', '/instancia/deletar', payload);
+    if ([200, 201, 204, 404].includes(tryPost.status || 0)) return tryPost;
+
+    const tryExcluir = await this.request<any>('POST', '/instancia/excluir', payload);
+    return tryExcluir;
   }
 
   // Conectar/Obter QR Code para uma instância

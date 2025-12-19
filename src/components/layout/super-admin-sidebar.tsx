@@ -18,7 +18,8 @@ import {
   Store,
   Ticket,
   Bell,
-  Webhook,
+  Youtube,
+  Image as ImageIcon,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -53,9 +54,14 @@ export function SuperAdminSidebar() {
       icon: Bell,
     },
     {
-      href: '/super-admin/dashboard/integrations',
-      label: 'Integrações',
-      icon: Webhook,
+      href: '/super-admin/dashboard/appearance',
+      label: 'Aparência',
+      icon: ImageIcon,
+    },
+    {
+      href: '/super-admin/dashboard/tutorials',
+      label: 'Tutoriais',
+      icon: Youtube,
     },
   ];
 

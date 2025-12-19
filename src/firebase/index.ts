@@ -60,7 +60,6 @@ export function initializeFirebase() {
   } catch (e: any) {
     // Não falhar a inicialização em caso de emulador indisponível — logs são suficientes.
     // Em produção esta flag não é definida.
-    // eslint-disable-next-line no-console
     console.warn('Firebase emulator connection failed or not configured:', e);
   }
 

@@ -30,3 +30,6 @@ pnpm-debug.log*
 
 # Firebase
 /firebase-tools-instant-win.exe
+
+# Uploads (persisted on VPS)
+/uploads

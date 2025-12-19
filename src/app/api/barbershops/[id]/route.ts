@@ -1,26 +1,24 @@
-﻿import { NextResponse } from "next/server";
-import {
-  getBarbershopBySlugOrId,
-  updateBarbershop,
-  deleteBarbershop,
-} from "@/server/db/repositories/barbershops";
+import { NextResponse } from "next/server";
+import { verifyAccessToken } from "@/lib/jwt";
+import { deleteBarbershopFully } from "@/server/services/barbershop-deletion";
+import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+type Params = {
+  params: Promise<{
+    id?: string;
+  }>;
+};
 
 export async function GET(_: Request, { params }: Params) {
-  const { id } = params || {};
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
 
   try {
     const shop = await getBarbershopBySlugOrId(id);
     if (!shop) {
-      return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
     }
     return NextResponse.json({ data: shop });
   } catch (error: any) {
@@ -30,9 +28,9 @@ export async function GET(_: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const { id } = params || {};
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
   try {
     const payload = await req.json();
@@ -62,16 +60,16 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_: Request, { params }: Params) {
-  const { id } = params || {};
+export async function DELETE(req: Request, { params }: Params) {
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
   try {
-    await deleteBarbershop(id);
+    await deleteBarbershopFully(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/barbershops/[id] error:", error);
-    return NextResponse.json({ error: "Erro ao excluir barbearia" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Erro ao excluir barbearia" }, { status: 500 });
   }
 }

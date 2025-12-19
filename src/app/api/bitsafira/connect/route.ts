@@ -8,6 +8,7 @@ import {
   updateBarbershop,
   listBarbershopsByOwner,
 } from '@/server/db/repositories/barbershops';
+import { getUserById } from '@/server/db/repositories/users';
 
 export async function POST(request: Request) {
   try {
@@ -40,8 +41,10 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_BASE_URL ||
       new URL(request.url).origin).replace(/\/$/, "");
     const webhookUrl = `${appUrl}/api/webhooks/bitsafira`;
-    const instanceDescription = barbershop.email
-      ? `${barbershop.name || "BarberFlow"}-${barbershop.email}`
+    const ownerEmail = barbershop.ownerId ? (await getUserById(barbershop.ownerId))?.email : null;
+    const loginEmail = barbershop.email || ownerEmail;
+    const instanceDescription = loginEmail
+      ? `${barbershop.name || "BarberFlow"}-${loginEmail}`
       : `${barbershop.name || "BarberFlow"}-${barbershop.id}`;
 
     let instanceId = barbershop.bitsafiraInstanceId;
