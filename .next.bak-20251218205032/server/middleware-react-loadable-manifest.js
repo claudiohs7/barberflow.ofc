@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/(dashboard)/admin/dashboard/whatsapp-templates/page.client.tsx -> @emoji-mart/react":{"id":33704,"files":["static/chunks/c0e397d0.7df44a4078ff8924.js","static/chunks/3704.04dce34a3772af5f.js"]}}';
