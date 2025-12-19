@@ -124,9 +124,13 @@ const checkSubscriptionAndLogin = async (user: AuthUser) => {
         }
 
         const expiryDate = barbershopData.expiryDate ? new Date(barbershopData.expiryDate) : null;
-        const isExpired = expiryDate ? isBefore(expiryDate, startOfDay(new Date())) : false;
+        const today = startOfDay(new Date());
+        // compara apenas a data (ignora timezone) para evitar falsos positivos
+        const isExpired = expiryDate ? isBefore(startOfDay(expiryDate), today) : false;
+        // se houver data futura, consideramos ativo mesmo que o status salvo esteja "Inativa"
+        const isInactive = isExpired || barbershopData.status === "Inativa";
 
-        if (barbershopData.status === "Inativa" || isExpired) {
+        if (isInactive) {
             setInactiveBarbershop(barbershopData);
             setIsSubscriptionModalOpen(true);
             await signOut();
@@ -184,16 +188,32 @@ const onSubmit = async (values: FormData) => {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Senha</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
-                      <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="********"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        suppressHydrationWarning
+                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      >
+                        <span suppressHydrationWarning>
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" suppressHydrationWarning />
+                          ) : (
+                            <Eye className="h-4 w-4" suppressHydrationWarning />
+                          )}
+                        </span>
                       </Button>
                     </div>
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />

@@ -77,11 +77,14 @@ export async function POST(request: NextRequest) {
       const qrCodeValue = normalizeQrCodeBase64(result.dados.qrCode || result.dados.qr);
       const hasStatusChanged = barbershop.whatsappStatus !== normalizedStatus;
       const hasQrChanged = (qrCodeValue ?? null) !== (barbershop.qrCodeBase64 ?? null);
+      const missingInstanceInDb = !barbershop.bitsafiraInstanceId && result.dados.id;
 
-      if (hasStatusChanged || hasQrChanged) {
+      if (hasStatusChanged || hasQrChanged || missingInstanceInDb) {
         await updateBarbershop(barbershopId, {
           whatsappStatus: normalizedStatus,
           qrCodeBase64: qrCodeValue ?? null,
+          bitsafiraInstanceId: result.dados.id ?? barbershop.bitsafiraInstanceId,
+          bitsafiraInstanceData: result.dados as any,
         });
       }
 

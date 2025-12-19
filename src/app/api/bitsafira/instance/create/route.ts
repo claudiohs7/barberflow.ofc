@@ -45,16 +45,35 @@ export async function POST(request: NextRequest) {
       request.nextUrl.origin;
     const webhookUrl = `${baseUrl.replace(/\/$/, "")}/api/webhooks/bitsafira`;
 
-    const createPayload: CreateInstancePayload = {
+    // 1ª tentativa: id vazio (comportamento usado em /api/bitsafira/connect)
+    let createPayload: CreateInstancePayload = {
+      id: "",
       descricao: instanceDescription,
       urlWebhook: webhookUrl,
+      token: bitSafiraToken,
     };
     console.log("Payload para criar instancia:", createPayload);
 
-    const createResult: CreateInstanceResponse = await bitSafira.createInstance(createPayload);
+    let createResult: CreateInstanceResponse = await bitSafira.createInstance(createPayload);
     console.log("Resultado da criacao da instancia:", createResult);
 
-    if (createResult.status === 200 && createResult.dados) {
+    // Fallback: algumas respostas da API retornam 400/406 mesmo com todos campos.
+    // Tentamos sem o campo id para deixar a BitSafira gerar.
+    if (createResult.status >= 400) {
+      const fallbackPayload: CreateInstancePayload = {
+        descricao: instanceDescription,
+        urlWebhook: webhookUrl,
+        token: bitSafiraToken,
+      };
+      console.log("Retry criando instancia sem ID fixo:", fallbackPayload);
+      const retryResult = await bitSafira.createInstance(fallbackPayload);
+      console.log("Resultado retry criacao instancia:", retryResult);
+      if (retryResult.status < 400) {
+        createResult = retryResult;
+      }
+    }
+
+    if ((createResult.status === 200 || createResult.status === 201) && createResult.dados) {
       await updateBarbershop(barbershopId, {
         bitsafiraInstanceId: createResult.dados.id,
         whatsappStatus: "DISCONNECTED",
@@ -68,7 +87,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, message: createResult.mensagem || "Falha ao criar instancia BitSafira." },
+      {
+        success: false,
+        message: createResult.mensagem || createResult.message || "Falha ao criar instancia BitSafira.",
+      },
       { status: createResult.status || 500 },
     );
   } catch (error: any) {

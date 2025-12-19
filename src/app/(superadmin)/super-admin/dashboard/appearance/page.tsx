@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { fetchJson } from '@/lib/fetcher';
+import Image from 'next/image';
 
 type SiteAppearance = {
   homeHeroDesktopPath: string | null;
@@ -139,11 +140,14 @@ export default function SuperAdminAppearancePage() {
                 onChange={(e) => setDesktopFile(e.target.files?.[0] ?? null)}
               />
               <div className="rounded-lg border overflow-hidden bg-muted max-w-[560px]">
-                <div className="aspect-[16/9]">
-                  <img
+                <div className="aspect-[16/9] relative">
+                  <Image
                     src={desktopPreview || `${HERO_ASSET_DESKTOP}${data?.updatedAt ? `&t=${encodeURIComponent(data.updatedAt)}` : ''}`}
                     alt="Preview desktop"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 560px"
+                    className="object-cover"
+                    unoptimized
                   />
                 </div>
               </div>
@@ -161,11 +165,14 @@ export default function SuperAdminAppearancePage() {
                 onChange={(e) => setMobileFile(e.target.files?.[0] ?? null)}
               />
               <div className="rounded-lg border overflow-hidden bg-muted max-w-[260px] mx-auto lg:mx-0">
-                <div className="aspect-[9/16]">
-                  <img
+                <div className="aspect-[9/16] relative">
+                  <Image
                     src={mobilePreview || `${HERO_ASSET_MOBILE}${data?.updatedAt ? `&t=${encodeURIComponent(data.updatedAt)}` : ''}`}
                     alt="Preview mobile"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 260px"
+                    className="object-cover"
+                    unoptimized
                   />
                 </div>
               </div>

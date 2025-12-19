@@ -18,7 +18,7 @@ export default function LoginPage() {
 
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 border-2 border-primary/30 mb-6">
-            <Scissors className="h-8 w-8 text-primary" />
+            <Scissors className="h-8 w-8 text-primary" suppressHydrationWarning />
         </div>
         <h1 className="text-3xl font-headline font-bold mb-2">
           Bem-vindo de volta ao{" "}

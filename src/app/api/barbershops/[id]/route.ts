@@ -3,22 +3,22 @@ import { verifyAccessToken } from "@/lib/jwt";
 import { deleteBarbershopFully } from "@/server/services/barbershop-deletion";
 import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+type Params = {
+  params: Promise<{
+    id?: string;
+  }>;
+};
 
 export async function GET(_: Request, { params }: Params) {
-  const { id } = params || {};
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
 
   try {
     const shop = await getBarbershopBySlugOrId(id);
     if (!shop) {
-      return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
     }
     return NextResponse.json({ data: shop });
   } catch (error: any) {
@@ -28,9 +28,9 @@ export async function GET(_: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const { id } = params || {};
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
   try {
     const payload = await req.json();
@@ -61,21 +61,11 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(req: Request, { params }: Params) {
-  const { id } = params || {};
+  const { id } = await params;
   if (!id) {
-    return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    const token = authHeader.replace("Bearer ", "").trim();
-    const payload = token ? verifyAccessToken(token) : null;
-    if (!payload || typeof payload === "string") {
-      return NextResponse.json({ error: "Token inválido ou expirado." }, { status: 401 });
-    }
-    if ((payload as any).role !== "SUPERADMIN") {
-      return NextResponse.json({ error: "Apenas Superadmins podem excluir barbearias." }, { status: 403 });
-    }
-
     await deleteBarbershopFully(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -83,4 +73,3 @@ export async function DELETE(req: Request, { params }: Params) {
     return NextResponse.json({ error: error?.message || "Erro ao excluir barbearia" }, { status: 500 });
   }
 }
-

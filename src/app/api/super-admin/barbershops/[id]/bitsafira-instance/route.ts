@@ -17,19 +17,20 @@ function requireSuperAdmin(req: Request) {
   return { ok: true as const };
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+type Params = { params: Promise<{ id?: string }> };
+
+export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const auth = requireSuperAdmin(req);
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 403 });
 
-    const barbershopId = params?.id;
-    if (!barbershopId) return NextResponse.json({ error: "ID da barbearia é obrigatório." }, { status: 400 });
+    const { id } = await params;
+    if (!id) return NextResponse.json({ error: "ID da barbearia é obrigatório." }, { status: 400 });
 
-    const result = await deleteBitSafiraInstanceForBarbershop(barbershopId);
+    const result = await deleteBitSafiraInstanceForBarbershop(id);
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     console.error("DELETE /api/super-admin/barbershops/[id]/bitsafira-instance error:", error);
     return NextResponse.json({ error: error?.message || "Erro ao excluir instância." }, { status: 500 });
   }
 }
-

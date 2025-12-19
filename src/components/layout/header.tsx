@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import Link from "next/link";
@@ -48,8 +48,8 @@ export function Header() {
             <Button variant="ghost" asChild className="transition-transform duration-300 hover:scale-105">
               <Link href="/auth/login">Entrar</Link>
             </Button>
-            <Button asChild className="bg-green-600 hover:bg-green-700 text-white transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-              <Link href="/auth/admin/register">Começar</Link>
+            <Button asChild className="bg-pink-600 hover:bg-pink-700 text-white transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+              <Link href="/auth/admin/register">Comecar</Link>
             </Button>
           </nav>
           <Sheet>
@@ -59,7 +59,7 @@ export function Header() {
                 size="icon"
                 className="md:hidden"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5" suppressHydrationWarning />
                 <span className="sr-only">Toggle Menu</span>
               </Button>
             </SheetTrigger>
@@ -91,8 +91,8 @@ export function Header() {
                     <Button variant="ghost" asChild>
                         <Link href="/auth/login">Entrar</Link>
                     </Button>
-                    <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
-                        <Link href="/auth/admin/register">Começar</Link>
+                    <Button asChild className="bg-pink-600 hover:bg-pink-700 text-white">
+                        <Link href="/auth/admin/register">Comecar</Link>
                     </Button>
                 </div>
               </nav>

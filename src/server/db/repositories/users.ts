@@ -22,7 +22,12 @@ export async function getUserById(id: string) {
 export async function createUser(data: CreateUserInput) {
   const existing = await findUserByEmail(data.email);
   if (existing) {
-    throw new Error("E-mail já está em uso.");
+    const ownedBarbershops = await prisma.barbershop.count({ where: { ownerId: existing.id } });
+    if (ownedBarbershops === 0) {
+      await prisma.user.delete({ where: { id: existing.id } });
+    } else {
+      throw new Error("E-mail já está em uso.");
+    }
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);

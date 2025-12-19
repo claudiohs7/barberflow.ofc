@@ -1,7 +1,7 @@
-import dynamic from "next/dynamic";
+ "use client";
 
-const WhatsAppPage = dynamic(() => import("./page.client"), { ssr: false });
+ import WhatsAppPage from "./page.client";
 
-export default function Page() {
-  return <WhatsAppPage />;
-}
+ export default function Page() {
+   return <WhatsAppPage />;
+ }
