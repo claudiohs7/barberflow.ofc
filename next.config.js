@@ -1,7 +1,6 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/barberflow',
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
@@ -9,9 +8,6 @@ const nextConfig = {
   experimental: {
     
   },
-  allowedDevOrigins: [
-      "https://6000-firebase-barberflow-1411-1763174234807.cluster-mdgxqvvkkbfpqrfigfiuugu5pk.cloudworkstations.dev",
-  ],
   images: {
     remotePatterns: [
       {
@@ -29,18 +25,6 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https' ,
-        hostname: 'storage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
-       {
-        protocol: 'https' ,
-        hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/**',
       },

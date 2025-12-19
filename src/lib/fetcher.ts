@@ -23,6 +23,23 @@ function extractErrorMessage(payload: unknown): string | null {
   return null;
 }
 
+function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (typeof input !== "string") return input;
+  // Absolute URL already provided
+  if (/^https?:\/\//i.test(input)) return input;
+
+  const base =
+    (process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== "undefined" ? window.location.origin : "")) || "";
+  const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/^\/|\/$/g, "");
+  const normalizedBase = base.replace(/\/$/, "");
+  const normalizedBasePath = basePath ? `/${basePath}` : "";
+  const baseAlreadyHasPath = normalizedBasePath && normalizedBase.endsWith(normalizedBasePath);
+  const normalizedPath = input.startsWith("/") ? input : `/${input}`;
+
+  const finalBase = baseAlreadyHasPath ? normalizedBase : `${normalizedBase}${normalizedBasePath}`;
+  return `${finalBase}${normalizedPath}`;
+}
+
 export async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const token = getAccessToken();
@@ -30,7 +47,7 @@ export async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): 
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(input, {
+  const res = await fetch(resolveUrl(input), {
     ...init,
     headers,
     credentials: init.credentials ?? "omit",
