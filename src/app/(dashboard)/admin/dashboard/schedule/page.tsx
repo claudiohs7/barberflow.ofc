@@ -118,7 +118,7 @@ const formatTimeRange = (start: Date, end?: Date | null) => {
   const startLabel = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (!end) return startLabel;
   const endLabel = end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${startLabel} as ${endLabel}`;
+  return `${startLabel} às ${endLabel}`;
 };
 
 const formatClientLabel = (client: Client) =>

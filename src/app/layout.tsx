@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ClientOnly } from "@/components/client-only";
 import { AuthProvider } from "@/context/AuthContext";
+import Script from "next/script";
 import { Inter, Space_Grotesk } from "next/font/google";
 
 const inter = Inter({
@@ -37,7 +38,10 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" suppressHydrationWarning>
+        <Script id="strip-extension-attrs" strategy="beforeInteractive">
+          {`document.querySelectorAll('[bis_skin_checked]').forEach((node) => node.removeAttribute('bis_skin_checked'));`}
+        </Script>
         <AuthProvider>
           {children}
           <ClientOnly>

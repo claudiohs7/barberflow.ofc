@@ -42,35 +42,55 @@ export default function ClientDashboardHomePage() {
   const displayName = user?.name?.split(" ")[0] || "Cliente";
 
   useEffect(() => {
+    let cancelled = false;
+
+    const stopLoading = () => {
+      if (!cancelled) setIsLoadingCity(false);
+    };
+
+    const fetchByIp = async () => {
+      try {
+        const response = await fetchJson<{ city: string }>("/api/geolocate", { credentials: "omit" });
+        if (!cancelled) setUserCity(response.city ?? null);
+      } catch (ipError) {
+        console.warn("Falha ao buscar cidade via IP, seguindo sem localizaÇõÇœo.", ipError);
+      } finally {
+        stopLoading();
+      }
+    };
+
+    const fetchByCoords = async (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        const response = await fetchJson<{ city: string }>(`/api/geolocate?lat=${latitude}&lon=${longitude}`, {
+          credentials: "omit",
+        });
+        if (!cancelled) setUserCity(response.city ?? null);
+        stopLoading();
+      } catch (error) {
+        console.warn("Falha ao buscar cidade por coordenadas, tentando via IP.", error);
+        fetchByIp();
+      }
+    };
+
     const fetchUserCity = () => {
+      if (!navigator?.geolocation) {
+        fetchByIp();
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            const response = await fetchJson<{ city: string }>(`/api/geolocate?lat=${latitude}&lon=${longitude}`, {
-              credentials: "omit",
-            });
-            setUserCity(response.city);
-          } catch (error) {
-            console.error("Falha ao buscar cidade por coordenadas:", error);
-          } finally {
-            setIsLoadingCity(false);
-          }
-        },
-        async () => {
-          try {
-            const response = await fetchJson<{ city: string }>("/api/geolocate", { credentials: "omit" });
-            setUserCity(response.city);
-          } catch (ipError) {
-            console.error("Falha ao buscar cidade via IP:", ipError);
-          } finally {
-            setIsLoadingCity(false);
-          }
-        },
+        (position) => fetchByCoords(position),
+        () => fetchByIp(),
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     };
+
     fetchUserCity();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
