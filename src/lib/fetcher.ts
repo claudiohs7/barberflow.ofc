@@ -34,8 +34,11 @@ function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
   const fallbackHost = `http://localhost:${port}`;
   const base = browserOrigin || process.env.NEXT_PUBLIC_SITE_URL || fallbackHost;
   const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/^\/|\/$/g, "");
+  // Avoid prepending the base path when running on localhost (dev server has no base path)
+  const isLocalBase = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(base);
+  const shouldApplyBasePath = basePath && !isLocalBase;
   const normalizedBase = base.replace(/\/$/, "");
-  const normalizedBasePath = basePath ? `/${basePath}` : "";
+  const normalizedBasePath = shouldApplyBasePath ? `/${basePath}` : "";
   const baseAlreadyHasPath = normalizedBasePath && normalizedBase.endsWith(normalizedBasePath);
   const normalizedPath = input.startsWith("/") ? input : `/${input}`;
 

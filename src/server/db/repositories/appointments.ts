@@ -1,6 +1,7 @@
 import { Prisma, $Enums } from "@prisma/client";
 import prisma from "../client";
 import type { Appointment, AppointmentStatus } from "@/lib/definitions";
+import { removeReminderQueueEntry } from "@/server/db/repositories/whatsapp-queue";
 
 type AppointmentInput = {
   barbershopId: string;
@@ -49,6 +50,8 @@ function toDomain(model: Prisma.AppointmentGetPayload<{ include: { services: tru
         ? "pending"
         : "confirmed",
     totalDuration: model.totalDuration ?? undefined,
+    createdAt: model.createdAt,
+    updatedAt: model.updatedAt,
   };
 }
 
@@ -56,13 +59,20 @@ export async function listAppointments(
   barbershopId: string,
   from?: Date,
   to?: Date,
-  opts?: { clientId?: string; barberId?: string }
+  opts?: { clientId?: string; barberId?: string; createdAfter?: Date }
 ) {
   const records = await prisma.appointment.findMany({
     where: {
       barbershopId,
       ...(opts?.clientId ? { clientId: opts.clientId } : {}),
       ...(opts?.barberId ? { barberId: opts.barberId } : {}),
+      ...(opts?.createdAfter
+        ? {
+            createdAt: {
+              gt: opts.createdAfter,
+            },
+          }
+        : {}),
       ...(from || to
         ? {
             startTime: {
@@ -75,6 +85,32 @@ export async function listAppointments(
     orderBy: { startTime: "desc" },
     include: { services: true },
   });
+  return records.map(toDomain);
+}
+
+export async function listAppointmentsByClient(clientId: string) {
+  const records = await prisma.appointment.findMany({
+    where: { clientId },
+    include: { services: true },
+    orderBy: { startTime: "desc" },
+  });
+  return records.map(toDomain);
+}
+
+export async function listAppointmentsByPhone(phone: string) {
+  const normalized = phone.replace(/\D/g, "");
+  if (!normalized) return [];
+
+  const records = await prisma.appointment.findMany({
+    where: {
+      clientPhone: {
+        contains: normalized,
+      },
+    },
+    include: { services: true },
+    orderBy: { startTime: "desc" },
+  });
+
   return records.map(toDomain);
 }
 
@@ -144,5 +180,8 @@ export async function updateAppointment(id: string, data: Partial<AppointmentInp
 }
 
 export async function deleteAppointment(id: string) {
+  // Remove o agendamento e, em seguida, limpa a fila ligada a ele.
+  // Feito fora de transação para evitar conflito com outros clients dentro de removeReminderQueueEntry.
   await prisma.appointment.delete({ where: { id } });
+  await removeReminderQueueEntry({ appointmentId: id });
 }

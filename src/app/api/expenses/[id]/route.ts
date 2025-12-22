@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateExpense, deleteExpense } from "@/server/db/repositories/expenses";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id?: string }> };
 
 function parseAmount(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
@@ -15,21 +15,26 @@ function parseAmount(value: unknown): number | undefined {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "ID da despesa e obrigatorio." }, { status: 400 });
+  }
+
   try {
     const body = await req.json();
     const { description, category, type, amount, date } = body ?? {};
 
     const parsedAmount = parseAmount(amount);
     if (amount !== undefined && !Number.isFinite(parsedAmount ?? NaN)) {
-      return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+      return NextResponse.json({ error: "Valor invalido" }, { status: 400 });
     }
 
     const parsedDate = date ? new Date(date) : undefined;
     if (date !== undefined && parsedDate && Number.isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: "Data inválida" }, { status: 400 });
+      return NextResponse.json({ error: "Data invalida" }, { status: 400 });
     }
 
-    const updated = await updateExpense(params.id, {
+    const updated = await updateExpense(id, {
       description,
       category,
       type,
@@ -44,8 +49,13 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "ID da despesa e obrigatorio." }, { status: 400 });
+  }
+
   try {
-    await deleteExpense(params.id);
+    await deleteExpense(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/expenses/:id error:", error);

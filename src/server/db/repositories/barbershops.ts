@@ -33,6 +33,18 @@ function mapPlan(plan?: string): "BASIC" | "PREMIUM" {
   return plan.toLowerCase().includes("prem") ? "PREMIUM" : "BASIC";
 }
 
+function mapStatusToDb(status?: string): "Ativa" | "Inativa" | undefined {
+  if (!status) return undefined;
+  const normalized = status.toLowerCase();
+  return normalized.startsWith("in") ? "Inativa" : "Ativa";
+}
+
+function mapStatusToDomain(status?: string | null): Barbershop["status"] | undefined {
+  if (!status) return undefined;
+  const normalized = status.toLowerCase();
+  return normalized.startsWith("in") ? "Inativa" : "Ativa";
+}
+
 function normalizeCpfCnpj(value?: string) {
   return (value || "").replace(/\D/g, "");
 }
@@ -67,7 +79,7 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
     description: shop.description ?? undefined,
     ownerId: shop.ownerId ?? undefined,
     plan: shop.plan === "PREMIUM" ? "Premium" : "B├ísico",
-    status: shop.status as Barbershop["status"],
+    status: mapStatusToDomain(shop.status) as Barbershop["status"],
     expiryDate: shop.expiryDate?.toISOString(),
     address: (shop.addressJson as Address | null) ?? undefined,
     operatingHours: (shop.operatingHoursJson as OperatingHour[] | null) ?? undefined,
@@ -112,7 +124,7 @@ export async function createBarbershop(data: BarbershopCreateInput) {
       description: data.description,
       ownerId: data.ownerId,
       plan: mapPlan(data.plan) as any,
-      status: data.status,
+      status: mapStatusToDb(data.status),
       expiryDate,
       addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
       operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
@@ -152,7 +164,7 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
       description: data.description,
       ownerId: data.ownerId,
       plan: data.plan ? mapPlan(data.plan) : undefined,
-      status: data.status,
+      status: mapStatusToDb(data.status),
       expiryDate,
       addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
       operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,

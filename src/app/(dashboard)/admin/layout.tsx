@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { MessageTemplatesProvider } from "@/context/MessageTemplatesContext";
@@ -9,7 +9,7 @@ import { SessionTimeout } from "@/components/session-timeout";
 import { RouteGuard } from "@/components/route-guard";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { isBefore, startOfDay } from "date-fns";
 import type { Barbershop } from "@/lib/definitions";
 import { fetchJson } from "@/lib/fetcher";
@@ -19,37 +19,57 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const pathname = usePathname();
   const [barbershopData, setBarbershopData] = useState<Barbershop | null>(null);
   const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadBarbershop = useCallback(async () => {
     if (!barbershopId) {
       setBarbershopData(null);
       setIsLoadingBarbershop(false);
       return;
     }
     setIsLoadingBarbershop(true);
-    fetchJson<{ data: Barbershop[] }>(`/api/barbershops?ownerId=${encodeURIComponent(barbershopId)}`)
-      .then((response) => {
-        if (isMounted) {
-          setBarbershopData(response.data?.[0] ?? null);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setBarbershopData(null);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingBarbershop(false);
-        }
-      });
-    return () => {
-      isMounted = false;
-    };
+    try {
+      const response = await fetchJson<{ data: Barbershop[] }>(
+        `/api/barbershops?ownerId=${encodeURIComponent(barbershopId)}`
+      );
+      setBarbershopData(response.data?.[0] ?? null);
+    } catch {
+      setBarbershopData(null);
+    } finally {
+      setIsLoadingBarbershop(false);
+    }
   }, [barbershopId]);
+
+  useEffect(() => {
+    void loadBarbershop();
+  }, [loadBarbershop]);
+
+  useEffect(() => {
+    const handler = () => {
+      void loadBarbershop();
+      // força recomputar dados de página/rotas para refletir o que o super admin mudou
+      router.refresh();
+    };
+    const storageHandler = (event: StorageEvent) => {
+      if (event.key === "barbershop-updated") {
+        handler();
+      }
+    };
+    window.addEventListener("barbershop-updated", handler as EventListener);
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      window.removeEventListener("barbershop-updated", handler as EventListener);
+      window.removeEventListener("storage", storageHandler);
+    };
+  }, [loadBarbershop]); // router.refresh is stable; kept out to avoid dependency-size variation
+
+  // Ao trocar de aba/rota dentro do dashboard, revalida plano/status da barbearia
+  useEffect(() => {
+    if (!barbershopId) return;
+    void loadBarbershop();
+  }, [pathname, barbershopId, loadBarbershop]);
 
   useEffect(() => {
     if (!barbershopData || !user) return;
@@ -58,8 +78,8 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
       signOut().then(() => {
         toast({
           variant: "destructive",
-          title: "Plano Inativo",
-          description: "Sua assinatura está inativa. Por favor, contate o suporte.",
+          title: "Plano inativo ou vencido",
+          description: "Sua assinatura foi desativada. Reative um plano ou fale com o suporte.",
         });
         router.push("/auth/admin/login");
       });
@@ -102,3 +122,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     </SidebarProvider>
   );
 }
+
+
+
+
+

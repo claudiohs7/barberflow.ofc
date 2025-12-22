@@ -1172,8 +1172,11 @@ const deleteAppt = async (id: string) => {
                   ) : Object.keys(groupedAppointments).length > 0 ? (
                     Object.entries(groupedAppointments).map(([barberName, appts]) => (
                       <div key={barberName}>
-                        <div className="bg-muted px-4 py-2 border-t border-b">
-                          <h4 className="text-sm font-semibold">{barberName}</h4>
+                        <div className="px-4 py-3 border-t border-b border-slate-800 bg-slate-900/60">
+                          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/40 px-4 py-2 shadow-sm">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Barbeiro</span>
+                            <span className="text-sm font-bold text-emerald-50">{barberName}</span>
+                          </div>
                         </div>
                         <Table>
                           <TableHeader>

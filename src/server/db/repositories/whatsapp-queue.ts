@@ -58,6 +58,10 @@ export async function upsertReminderQueueEntry(input: {
       return;
     }
 
+    if (existing?.status === "cancelled") {
+      return;
+    }
+
     if (existing) {
       await queueModel.update({
         where: { id: existing.id },
@@ -200,6 +204,7 @@ export async function cancelReminderQueueEntry(input: {
 export async function removeReminderQueueEntry(input: {
   appointmentId: string;
   templateType?: string;
+  reason?: string;
 }) {
   const queueModel = getQueueModel();
   if (!queueModel) {
@@ -207,10 +212,14 @@ export async function removeReminderQueueEntry(input: {
     return;
   }
   try {
-    await queueModel.deleteMany({
+    await queueModel.updateMany({
       where: {
         appointmentId: input.appointmentId,
         ...(input.templateType ? { templateType: input.templateType } : {}),
+      },
+      data: {
+        status: "cancelled",
+        lastError: input.reason ?? "Fila cancelada manualmente.",
       },
     });
   } catch (error) {
@@ -226,7 +235,10 @@ export async function removeReminderQueueEntryById(id: string) {
     return;
   }
   try {
-    await queueModel.delete({ where: { id } });
+    await queueModel.update({
+      where: { id },
+      data: { status: "cancelled", lastError: "Fila cancelada manualmente." },
+    });
   } catch (error) {
     console.warn("Falha ao remover item da fila no banco. Usando fila em memoria.", error);
     removeReminderQueueById(id);

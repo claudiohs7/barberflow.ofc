@@ -77,12 +77,21 @@ type SuperAdminBarbershop = {
         cep: string;
     };
     fullAddressString: string;
+    whatsappStatus?: string;
+    qrCodeBase64?: string | null;
+    bitsafiraInstanceId?: string | null;
+    bitSafiraToken?: string | null;
+    whatsAppInstanceId?: string | null;
+    bitsafiraInstanceData?: any;
 };
 
 const planPrices = {
     'Basico': 49.90,
     'Premium': 119.90
 };
+
+const normalizePlan = (plan?: string) =>
+    plan?.toLowerCase().includes("prem") ? "Premium" : "Basico";
 
 export default function BarbershopsPage() {
     const { toast } = useToast();
@@ -146,12 +155,14 @@ export default function BarbershopsPage() {
             }
 
             const expiryDate = shop.expiryDate ? new Date(shop.expiryDate) : null;
-            let status = shop.status || 'Inativa';
+            let status: SuperAdminBarbershop['status'] = shop.status || 'Inativa';
 
-            if (expiryDate && !isBefore(expiryDate, startOfDay(new Date()))) {
-                status = 'Ativa';
-            } else if (expiryDate && isBefore(expiryDate, startOfDay(new Date()))) {
+            // Regra: se o status estiver salvo como Inativa, mantém inativa mesmo com data futura.
+            // Caso contrário, usa a data de vencimento para marcar como Inativa quando já venceu.
+            if (status !== 'Inativa' && expiryDate && isBefore(expiryDate, startOfDay(new Date()))) {
                 status = 'Inativa';
+            } else if (status !== 'Inativa') {
+                status = 'Ativa';
             }
 
             return {
@@ -162,13 +173,19 @@ export default function BarbershopsPage() {
                 ownerId: shop.ownerId,
                 email: shop.email || 'E-mail no informado',
                 phone: shop.phone || '(00) 00000-0000',
-                plan: shop.plan || 'Basico',
+                plan: normalizePlan(shop.plan),
                 status,
                 expiryDate: expiryDate ? format(expiryDate, 'dd/MM/yyyy') : 'N/A',
                 registeredDate: shop.createdAt ? format(new Date(shop.createdAt), 'dd/MM/yyyy') : 'N/A',
                 operatingHours: shop.operatingHours || [],
                 address: addressObj,
                 fullAddressString,
+                whatsappStatus: shop.whatsappStatus,
+                qrCodeBase64: shop.qrCodeBase64,
+                bitsafiraInstanceId: shop.bitsafiraInstanceId,
+                bitSafiraToken: shop.bitSafiraToken,
+                whatsAppInstanceId: shop.whatsAppInstanceId,
+                bitsafiraInstanceData: shop.bitsafiraInstanceData,
             };
         });
     }, [rawBarbershops]);
@@ -257,9 +274,31 @@ export default function BarbershopsPage() {
         fetchCompanyData();
     }, [watchedCnpj, isAddDialogOpen, isEditDialogOpen]);
 
+    // Atualiza a lista ao receber eventos de sincronização (outra aba / outro usuário)
+    useEffect(() => {
+        const syncHandler = () => {
+            void loadData();
+        };
+
+        // CustomEvent emitido localmente
+        window.addEventListener("barbershop-updated", syncHandler as EventListener);
+        // storage usado entre abas
+        const storageHandler = (event: StorageEvent) => {
+            if (event.key === "barbershop-updated") {
+                syncHandler();
+            }
+        };
+        window.addEventListener("storage", storageHandler);
+
+        return () => {
+            window.removeEventListener("barbershop-updated", syncHandler as EventListener);
+            window.removeEventListener("storage", storageHandler);
+        };
+    }, [loadData]);
+
     const handleEditClick = (shop: Barbershop) => {
         setEditingShop(shop);
-        setFormState({ ...shop });
+        setFormState({ ...shop, plan: normalizePlan(shop.plan) });
         setIsEditDialogOpen(true);
     };
 
@@ -278,6 +317,7 @@ export default function BarbershopsPage() {
             await fetchJson(`/api/barbershops/${shopToDelete.id}`, { method: "DELETE" });
             setRawBarbershops(prev => prev!.filter(s => s.id !== shopToDelete.id));
             toast({ title: "Barbearia Excluda!", description: `${shopToDelete.name} foi removida do banco de dados.` });
+            await loadData();
         } catch (error: any) {
             console.error("Erro ao excluir barbearia:", error);
             toast({ variant: "destructive", title: "Erro ao Excluir", description: error.message || "No foi possvel remover a barbearia do banco de dados." });
@@ -388,7 +428,7 @@ export default function BarbershopsPage() {
             const updatedShop = response.data;
             setRawBarbershops(prev => prev!.map(s => (s.id === updatedShop.id ? updatedShop : s)));
 
-                        toast({ title: "Dados da Barbearia Salvos!", description: "As informaes no banco de dados foram atualizadas." });
+            toast({ title: "Dados da barbearia salvos!", description: "As informações no banco de dados foram atualizadas." });
             if (typeof window !== "undefined") {
                 const barbershopUpdatePayload = { ...updatedShop, ownerId: updatedShop.ownerId };
                 window.dispatchEvent(new CustomEvent("barbershop-updated", { detail: barbershopUpdatePayload }));
@@ -401,6 +441,8 @@ export default function BarbershopsPage() {
                     console.warn("No foi possvel sincronizar a atualizao entre abas:", error);
                 }
             }
+            // Garante que os dados renderizados reflitam o estado mais recente vindo da API
+            await loadData();
         } catch (error: any) {
             console.error("Erro ao atualizar barbearia:", error);
             toast({
@@ -475,11 +517,35 @@ export default function BarbershopsPage() {
         setFilterStatus('all');
         setFilterPlan('all');
     };
-    
-    // const handleUpdateAllBarbershops = async () => {
-    //     // This function is no longer needed with the removal of API keys from the barbershop doc.
-    //     toast({ title: "Ao Descontinuada", description: "Esta funo no  mais necessria." });
-    // };
+
+    const handleUpdateAllBarbershops = useCallback(async () => {
+        setIsUpdatingAll(true);
+        try {
+            // Sincroniza status/instância do WhatsApp (BitSafira) de cada barbearia
+            for (const shop of rawBarbershops || []) {
+                if (!shop?.id) continue;
+                try {
+                    await fetchJson("/api/bitsafira/validate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ barbershopId: shop.id }),
+                    });
+                } catch (err) {
+                    console.warn("Falha ao validar barbearia", shop.id, err);
+                }
+            }
+            await loadData();
+            toast({ title: "Barbearias atualizadas", description: "Status e instâncias sincronizados." });
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Erro ao atualizar",
+                description: error?.message || "Não foi possível sincronizar as barbearias.",
+            });
+        } finally {
+            setIsUpdatingAll(false);
+        }
+    }, [rawBarbershops, loadData, toast]);
 
     const getGoogleMapsLink = (address: Barbershop['address']) => {
         const fullAddress = `${address.street}, ${address.number}, ${address.city}, ${address.state}`;
@@ -504,8 +570,14 @@ export default function BarbershopsPage() {
                             <CardTitle>Gerenciar Barbearias</CardTitle>
                             <CardDescription>Visualize e edite todos os dados das barbearias cadastradas ({displayedBarbershops.length} de {allBarbershops.length})</CardDescription>
                         </div>
-                        <Button size="sm" variant="outline" className="gap-2" onClick={loadData}>
-                            <RefreshCw className="h-4 w-4" /> Atualizar
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={handleUpdateAllBarbershops}
+                          disabled={isUpdatingAll}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isUpdatingAll ? "animate-spin" : ""}`} /> Atualizar
                         </Button>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 pt-4">
@@ -632,12 +704,18 @@ export default function BarbershopsPage() {
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Badge variant="outline" className="font-mono text-xs">
-                                                    {shop.bitsafiraInstanceId ?? "Nao conectada"}
-                                                </Badge>
+                                                {shop.plan.toLowerCase().startsWith("prem") ? (
+                                                    <Badge variant="outline" className="font-mono text-xs">
+                                                        {shop.bitsafiraInstanceId ?? "Nao conectada"}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="font-mono text-xs text-yellow-500 border-yellow-500/50">
+                                                        Plano Básico
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div className="flex flex-wrap gap-2">
-                                                {!shop.bitsafiraInstanceId && (
+                                                {!shop.bitsafiraInstanceId && shop.plan.toLowerCase().startsWith("prem") && (
                                                     <Button
                                                         variant="secondary"
                                                         size="sm"
@@ -762,11 +840,11 @@ export default function BarbershopsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Plano</Label>
-                                    <Select 
-                                        value={formState.plan} 
-                                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'Basico' | 'Premium')}
-                                        disabled={formState.status === 'Inativa'}
-                                    >
+                    <Select 
+                        value={normalizePlan(formState.plan)}
+                        onValueChange={(value) => handleSelectChange('plan' as keyof Barbershop, value as 'Basico' | 'Premium')}
+                        disabled={formState.status === 'Inativa'}
+                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecione o plano" />
                                         </SelectTrigger>

@@ -21,10 +21,15 @@ function requireSuperAdmin(req: Request) {
   return { ok, payload };
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+type Params = { params: Promise<{ id?: string }> };
+
+export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { ok } = requireSuperAdmin(req);
     if (!ok) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+
+    const { id } = await params;
+    if (!id) return NextResponse.json({ error: "ID do tutorial e obrigatorio." }, { status: 400 });
 
     const body = await req.json();
     const title = body?.title != null ? String(body.title).trim() : undefined;
@@ -34,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const enabled = body?.enabled === undefined ? undefined : Boolean(body.enabled);
 
     const youtubeId = youtubeUrl ? extractYoutubeId(youtubeUrl) : undefined;
-    const updated = await updateTutorialVideo(params.id, {
+    const updated = await updateTutorialVideo(id, {
       title,
       description,
       youtubeUrl,
@@ -50,16 +55,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { ok } = requireSuperAdmin(req);
     if (!ok) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
-    await deleteTutorialVideo(params.id);
+    const { id } = await params;
+    if (!id) return NextResponse.json({ error: "ID do tutorial e obrigatorio." }, { status: 400 });
+
+    await deleteTutorialVideo(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/tutorials/[id] error:", error);
     return NextResponse.json({ error: error?.message || "Erro ao excluir tutorial" }, { status: 500 });
   }
 }
-

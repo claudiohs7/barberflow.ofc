@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAccessToken } from "@/lib/jwt";
 import { deleteBarbershopFully } from "@/server/services/barbershop-deletion";
 import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
+import { deleteBitSafiraInstanceForBarbershop } from "@/server/services/barbershop-deletion";
 
 type Params = {
   params: Promise<{
@@ -33,6 +34,11 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
   }
   try {
+    const existing = await getBarbershopBySlugOrId(id);
+    if (!existing) {
+      return NextResponse.json({ error: "Barbearia nao encontrada" }, { status: 404 });
+    }
+
     const payload = await req.json();
     const updatePayload: Record<string, any> = {};
     if (payload.name) updatePayload.name = payload.name;
@@ -41,8 +47,8 @@ export async function PATCH(req: Request, { params }: Params) {
     if (payload.email) updatePayload.email = payload.email;
     if (payload.phone) updatePayload.phone = payload.phone;
     if (payload.description) updatePayload.description = payload.description;
-    if (payload.plan) updatePayload.plan = payload.plan;
-    if (payload.status) updatePayload.status = payload.status;
+    if (payload.plan !== undefined) updatePayload.plan = payload.plan;
+    if (payload.status !== undefined) updatePayload.status = payload.status;
     if (payload.status === "Inativa" && !payload.expiryDate) {
       updatePayload.expiryDate = new Date().toISOString();
     } else if (payload.expiryDate) {
@@ -51,6 +57,24 @@ export async function PATCH(req: Request, { params }: Params) {
     if (payload.logoUrl !== undefined) updatePayload.logoUrl = payload.logoUrl;
     if (payload.address) updatePayload.address = payload.address;
     if (payload.operatingHours) updatePayload.operatingHours = payload.operatingHours;
+
+    const isBasicPlan = (plan: string) => plan.toLowerCase().startsWith("b");
+
+    if (payload.plan && isBasicPlan(payload.plan)) {
+      // Downgrade: limpar/conectar campos de WhatsApp/BitSafira e remover instância
+      updatePayload.whatsappStatus = "DISCONNECTED";
+      updatePayload.qrCodeBase64 = null;
+      updatePayload.bitsafiraInstanceId = null;
+      updatePayload.bitSafiraToken = null;
+      updatePayload.whatsAppInstanceId = null;
+      updatePayload.bitsafiraInstanceData = null;
+      try {
+        await deleteBitSafiraInstanceForBarbershop(id);
+      } catch (err) {
+        console.warn("Falha ao excluir instancia BitSafira no downgrade:", (err as any)?.message || err);
+      }
+    }
+
     const updated = await updateBarbershop(id, updatePayload);
     return NextResponse.json({ data: updated });
   } catch (error: any) {

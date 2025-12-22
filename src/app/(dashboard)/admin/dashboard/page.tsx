@@ -26,6 +26,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { DollarSign, TrendingUp, TrendingDown, CalendarCheck, CalendarDays, Users, AlertTriangle, ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { cn, formatCurrency, slugify } from "@/lib/utils";
 import {
   AlertDialog,
@@ -276,10 +277,12 @@ export default function AdminDashboardPage() {
     const [bookingLink, setBookingLink] = useState('');
 
     useEffect(() => {
-        const slugFromName = barbershopData?.name ? slugify(barbershopData.name) : "";
-        const slugSegment = slugFromName || barbershopData?.id;
+        const idSegment = barbershopData?.id;
+        const fallbackSlug = barbershopData?.name ? slugify(barbershopData.name) : "";
+        const slugSegment = idSegment || fallbackSlug;
         if (slugSegment) {
-            const relative = `/agendar/${slugSegment}`;
+            const safeSegment = encodeURIComponent(slugSegment);
+            const relative = `/agendar/${safeSegment}`;
             const base =
               typeof window !== "undefined"
                 ? window.location.origin
@@ -349,20 +352,36 @@ export default function AdminDashboardPage() {
                   <p className="text-sm text-muted-foreground">
                       Use o link abaixo para divulgar sua página de agendamentos.
                   </p>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2 rounded-md bg-muted/50 border">
-                      <span className="font-mono text-sm text-foreground truncate flex-1">
+                  <div className="inline-flex flex-wrap items-center gap-2 p-2 rounded-md bg-muted/50 border max-w-full">
+                      <span className="font-mono text-sm text-foreground truncate px-2 py-1 rounded bg-background/60 border border-border">
                           {bookingLink}
                       </span>
                       <div className="flex gap-2">
-                          <Button asChild size="sm" className="shrink-0">
+                          <Button
+                            onClick={() => {
+                              const message = `Acesse esse link para agendar o seu horario.\n\n ${bookingLink}\n\nBarbearia ${barbershopData?.name || ""} `;
+                              const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                              window.open(waUrl, "_blank");
+                            }}
+                            size="sm"
+                            className="shrink-0 bg-[#25D366] hover:bg-[#22960d] text-white"
+                          >
+                            <WhatsAppIcon className="mr-2 h-4 w-4" />
+                            WhatsApp
+                          </Button>
+                          <Button
+                            onClick={() => copyToClipboard(bookingLink)}
+                            size="sm"
+                            className="shrink-0 hover:bg-[#131390]"
+                          >
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copiar
+                          </Button>
+                          <Button asChild size="sm" className="shrink-0 hover:bg-[#131390]">
                               <Link href={bookingLink} target="_blank">
                                   <ExternalLink className="mr-2 h-4 w-4" />
                                   Abrir
                               </Link>
-                          </Button>
-                          <Button onClick={() => copyToClipboard(bookingLink)} size="sm" className="shrink-0">
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copiar
                           </Button>
                       </div>
                   </div>

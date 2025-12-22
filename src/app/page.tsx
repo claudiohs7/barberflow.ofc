@@ -257,13 +257,11 @@ export default function Home() {
             </div>
             <div className="mx-auto mt-10 max-w-2xl lg:mx-0 lg:max-w-none">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-                <Link href="/auth/admin/register" aria-label="Iniciar teste gratuito de 7 dias no BarberFlow">
-                  <ShimmerButton background="hsl(var(--primary))">
-                    <span className="whitespace-pre-wrap text-center text-sm font-medium leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
-                      Iniciar Teste Gratuito de 7 Dias
-                    </span>
-                  </ShimmerButton>
-                </Link>
+                <ShimmerButton href="/auth/admin/register" background="hsl(var(--primary))" aria-label="Iniciar teste gratuito de 7 dias no BarberFlow">
+                  <span className="whitespace-pre-wrap text-center text-sm font-medium leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
+                    Iniciar Teste Gratuito de 7 Dias
+                  </span>
+                </ShimmerButton>
                 <Button asChild variant="link" className="text-white">
                   <Link href="/auth/admin/login" aria-label="Acessar minha conta no BarberFlow">
                     Já tenho uma conta <span aria-hidden="true">&rarr;</span>
@@ -597,13 +595,11 @@ export default function Home() {
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Comece seu teste gratuito de 7 dias hoje mesmo, sem compromisso e sem cadastrar cartão de crédito.
               </p>
-              <Link href="/auth/admin/register" aria-label="Criar minha conta no BarberFlow">
-                <ShimmerButton background="hsl(var(--primary))" className="h-11 px-8 inline-flex items-center justify-center mt-4">
-                  <span className="whitespace-pre-wrap text-center text-sm font-medium leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
-                    Criar minha conta
-                  </span>
-                </ShimmerButton>
-              </Link>
+              <ShimmerButton href="/auth/admin/register" background="hsl(var(--primary))" className="h-11 px-8 inline-flex items-center justify-center mt-4" aria-label="Criar minha conta no BarberFlow">
+                <span className="whitespace-pre-wrap text-center text-sm font-medium leading-none tracking-tight text-white dark:from-white dark:to-slate-900/10 lg:text-lg">
+                  Criar minha conta
+                </span>
+              </ShimmerButton>
             </div>
           </div>
         </section>

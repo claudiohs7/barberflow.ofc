@@ -39,6 +39,8 @@ const templateHints: Record<string, string> = {
 
 const EmojiPicker = dynamic(async () => import("@emoji-mart/react"), { ssr: false });
 
+const placeholderRegex = new RegExp(`(${placeholders.map((p) => p.replace(/[{}]/g, "\\$&")).join("|")})`, "gi");
+
 export default function WhatsAppTemplatesPage() {
   const { barbershopId, isLoading: isBarbershopIdLoading } = useBarbershopId();
   const { setMessageTemplates } = useMessageTemplates();
@@ -147,8 +149,12 @@ export default function WhatsAppTemplatesPage() {
       setBarbershop(shop);
       const baseTemplates =
         shop?.messageTemplates && shop.messageTemplates.length > 0 ? shop.messageTemplates : defaultTemplates;
-      syncTemplates(baseTemplates);
-      lastSavedPayloadRef.current = JSON.stringify(normalizeTemplates(baseTemplates));
+      const isBasicPlan = (shop?.plan || "").toLowerCase().startsWith("b");
+      const filteredTemplates = isBasicPlan
+        ? baseTemplates.filter((tpl) => tpl.type === "Confirmação Manual")
+        : baseTemplates;
+      syncTemplates(filteredTemplates);
+      lastSavedPayloadRef.current = JSON.stringify(normalizeTemplates(filteredTemplates));
       isInitialLoadRef.current = true;
     } catch (error: any) {
       toast({
@@ -172,8 +178,10 @@ export default function WhatsAppTemplatesPage() {
   const saveTemplates = useCallback(
     async (payload: TemplateForm[], opts: { silent?: boolean; payloadKey?: string } = {}) => {
       if (!barbershopId) return;
+      const isBasicPlan = (barbershop?.plan || "").toLowerCase().startsWith("b");
+      const effectivePayload = isBasicPlan ? payload.filter((tpl) => tpl.type === "Confirmação Manual") : payload;
 
-      const payloadKey = opts.payloadKey ?? JSON.stringify(payload);
+      const payloadKey = opts.payloadKey ?? JSON.stringify(effectivePayload);
       if (opts.silent && payloadKey === lastSavedPayloadRef.current) return;
       if (isSavingRef.current) return;
 
@@ -182,13 +190,13 @@ export default function WhatsAppTemplatesPage() {
         const res = await fetch("/api/message-templates/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barbershopId, messageTemplates: payload }),
+          body: JSON.stringify({ barbershopId, messageTemplates: effectivePayload }),
         });
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json.error || json.message || "Nao foi possivel salvar os modelos.");
         }
-        const updated = (json.data as TemplateForm[]) || payload;
+        const updated = (json.data as TemplateForm[]) || effectivePayload;
         lastSavedPayloadRef.current = payloadKey;
         syncTemplates(updated);
         setBarbershop((prev) => (prev ? { ...prev, messageTemplates: updated } : prev));
@@ -258,6 +266,11 @@ export default function WhatsAppTemplatesPage() {
     );
   }
 
+  const isBasicPlan = (barbershop?.plan || "").toLowerCase().startsWith("b");
+  const visibleTemplates = isBasicPlan
+    ? templates.filter((tpl) => tpl.type === "Confirmação Manual")
+    : templates;
+
   return (
     <div className="space-y-6">
       <div>
@@ -267,18 +280,18 @@ export default function WhatsAppTemplatesPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <CardTitle>Templates de mensagens</CardTitle>
-            <CardDescription>
-              Ajuste os textos enviados automaticamente apos criar ou alterar agendamentos.
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {templates.map((template) => {
+        <Card>
+          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Templates de mensagens</CardTitle>
+              <CardDescription>
+                Ajuste os textos enviados automaticamente apos criar ou alterar agendamentos.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+            {visibleTemplates.map((template) => {
               const isReminder = template.type === "Lembrete de Agendamento";
 
               return (

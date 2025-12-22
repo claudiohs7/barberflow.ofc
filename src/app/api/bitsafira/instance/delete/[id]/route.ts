@@ -5,9 +5,11 @@ import { getBitSafiraApiClient } from "@/lib/bitsafira/api";
 import type { DeleteInstancePayload, DeleteInstanceResponse } from "@/lib/bitsafira/types";
 import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/barbershops";
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+type Params = { params: Promise<{ id?: string }> };
+
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const instanceId = params.id;
+    const { id: instanceId } = await params;
     const barbershopId = request.nextUrl.searchParams.get("barbershopId");
 
     if (!instanceId || !barbershopId) {
@@ -65,4 +67,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     );
   }
 }
-

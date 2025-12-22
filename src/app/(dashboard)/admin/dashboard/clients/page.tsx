@@ -235,6 +235,15 @@ export default function ClientsPage() {
     return digits.length >= 10 && digits.length <= 11;
   };
 
+  const formatPhone = (phone: string) => {
+    const digits = phoneDigits(phone);
+    if (digits.length < 10) return phone;
+    const ddd = digits.slice(0, 2);
+    const middle = digits.length === 11 ? digits.slice(2, 7) : digits.slice(2, 6);
+    const end = digits.length === 11 ? digits.slice(7) : digits.slice(6);
+    return `(${ddd}) ${middle}-${end}`;
+  };
+
   const resetClientForms = () => {
     setNewClientName("");
     setNewClientPhone("");
@@ -675,7 +684,7 @@ export default function ClientsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    <p className="text-muted-foreground">{client.phone}</p>
+                    <p className="text-muted-foreground">{formatPhone(client.phone)}</p>
                   </CardContent>
                   <CardFooter className="grid grid-cols-3 gap-2 p-2 bg-muted/50">
                     <Button variant="outline" size="sm" asChild className="text-green-500 border-green-500 hover:bg-green-500/10 hover:text-green-500">

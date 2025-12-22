@@ -127,6 +127,8 @@ export type Appointment = {
   endTime: Date;
   status: AppointmentStatus;
   totalDuration?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export type Expense = {

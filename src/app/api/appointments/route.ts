@@ -1,24 +1,39 @@
 import { NextResponse } from "next/server";
-import { createAppointment, listAppointments } from "@/server/db/repositories/appointments";
+import { createAppointment, listAppointments, listAppointmentsByClient, listAppointmentsByPhone } from "@/server/db/repositories/appointments";
 import { syncReminderQueueForAppointment } from "@/server/reminders/reminder-queue";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const barbershopId = searchParams.get("barbershopId");
-    if (!barbershopId) {
-      return NextResponse.json({ error: "barbershopId é obrigatório" }, { status: 400 });
-    }
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const clientId = searchParams.get("clientId") || undefined;
     const barberId = searchParams.get("barberId") || undefined;
-    const data = await listAppointments(
-      barbershopId,
-      from ? new Date(from) : undefined,
-      to ? new Date(to) : undefined,
-      { clientId, barberId }
-    );
+    const clientPhone = searchParams.get("clientPhone") || undefined;
+    const createdAfterParam = searchParams.get("createdAfter");
+    const createdAfterRaw = createdAfterParam ? new Date(createdAfterParam) : undefined;
+    const createdAfter = createdAfterRaw && !Number.isNaN(createdAfterRaw.getTime()) ? createdAfterRaw : undefined;
+
+    if (!barbershopId && clientId) {
+      const data = await listAppointmentsByClient(clientId);
+      return NextResponse.json({ data });
+    }
+
+    if (!barbershopId && clientPhone) {
+      const data = await listAppointmentsByPhone(clientPhone);
+      return NextResponse.json({ data });
+    }
+
+    if (!barbershopId) {
+      return NextResponse.json({ error: "barbershopId é obrigatório" }, { status: 400 });
+    }
+
+    const data = await listAppointments(barbershopId, from ? new Date(from) : undefined, to ? new Date(to) : undefined, {
+      clientId,
+      barberId,
+      createdAfter,
+    });
     return NextResponse.json({ data });
   } catch (error: any) {
     console.error("GET /api/appointments error:", error);

@@ -30,17 +30,26 @@ import { differenceInDays, startOfDay, format, isBefore } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
 
 
 const BASIC_PLAN: PlanName = "Básico";
 const planPrices = {
-    [BASIC_PLAN]: 49.90,
-    Premium: 119.90,
+    [BASIC_PLAN]: 49.9,
+    Premium: 119.9,
+};
+
+const normalizePlan = (plan?: string): PlanName => {
+  if (!plan) return BASIC_PLAN;
+  const lower = plan.toLowerCase();
+  if (lower.includes("prem")) return "Premium";
+  return BASIC_PLAN;
 };
 
 export default function SubscriptionPage() {
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, signOut } = useAuth();
+    const router = useRouter();
     const { barbershopId, isLoading: isBarbershopIdLoading } = useBarbershopId();
 
     const isSuperAdmin = user?.email === 'claudiohs@hotmail.com';
@@ -89,6 +98,7 @@ export default function SubscriptionPage() {
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeCost, setUpgradeCost] = useState(0);
     const [upgradeCredit, setUpgradeCredit] = useState(0);
+    const [hasNotifiedInactive, setHasNotifiedInactive] = useState(false);
 
     useEffect(() => {
         if (!isUpgradeModalOpen || !barbershopId) return;
@@ -143,6 +153,22 @@ export default function SubscriptionPage() {
         };
     }, [barbershopId, fetchBarbershop]);
 
+    // Se a barbearia ficar inativa, bloqueia imediatamente e faz logout
+    useEffect(() => {
+        if (barbershopData?.status !== "Inativa" || hasNotifiedInactive) return;
+        setHasNotifiedInactive(true);
+        toast({
+            variant: "destructive",
+            title: "Plano inativo",
+            description: "Sua assinatura foi desativada. Faça o upgrade ou fale com o suporte.",
+        });
+        void signOut().then(() => {
+            router.push("/auth/admin/login");
+        });
+    }, [barbershopData?.status, hasNotifiedInactive, toast, signOut, router]);
+
+    
+
     const getExpiryDetails = () => {
         if (!barbershopData || !barbershopData.expiryDate) {
             return { text: "Sem data de expiração.", days: 0, date: null, isTrial: false };
@@ -187,8 +213,8 @@ export default function SubscriptionPage() {
 
     const notifyPaymentDisabled = () => {
         toast({
-            title: "Pagamento indisponivel",
-            description: "A integracao de pagamento via Mercado Pago/PIX esta desativada. Fale com o suporte para concluir o upgrade.",
+            title: "Pagamento indisponível",
+            description: "A integração de pagamento via Mercado Pago/PIX está desativada. Fale com o suporte para concluir o upgrade.",
         });
     };
 
@@ -196,7 +222,8 @@ export default function SubscriptionPage() {
         return <div className="p-6">Carregando plano...</div>;
     }
 
-    const currentPlan = barbershopData?.plan || 'Básico';
+    const currentPlan = normalizePlan(barbershopData?.plan);
+    const planPrice = planPrices[currentPlan] ?? 0;
     const expiryDetails = getExpiryDetails();
 
     return (
@@ -221,7 +248,7 @@ export default function SubscriptionPage() {
                                 Plano {currentPlan}
                             </p>
                             </div>
-                            <p className="text-sm font-semibold text-muted-foreground">({formatCurrency(planPrices[currentPlan])}/mês)</p>
+                            <p className="text-sm font-semibold text-muted-foreground">({formatCurrency(planPrice)}/mês)</p>
                         </div>
                         <div className="text-center sm:text-right">
                             <Badge variant={expiryDetails.days > 7 ? "secondary" : "destructive"}>{expiryDetails.text}</Badge>
@@ -314,3 +341,5 @@ export default function SubscriptionPage() {
     </div>
     );
 }
+
+

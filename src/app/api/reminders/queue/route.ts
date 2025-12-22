@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { listReminderQueueEntries } from "@/server/db/repositories/whatsapp-queue";
 import { getAppointmentsByIds } from "@/server/db/repositories/appointments";
 import { syncReminderQueueForBarbershop } from "@/server/reminders/reminder-queue";
+import { processReminderQueueForBarbershop } from "@/server/reminders/run-reminders";
+import "@/server/reminders/poller";
 
 export async function GET(request: NextRequest) {
   const barbershopId = request.nextUrl.searchParams.get("barbershopId");
@@ -20,6 +22,12 @@ export async function GET(request: NextRequest) {
       } catch (syncError) {
         console.warn("Falha ao sincronizar fila:", syncError);
       }
+    }
+    // Processa automaticamente mensagens vencidas antes de listar a fila
+    try {
+      await processReminderQueueForBarbershop(barbershopId);
+    } catch (runError) {
+      console.warn("Falha ao processar fila automaticamente:", runError);
     }
     const queueEntries = await listReminderQueueEntries(barbershopId, status as any);
     const appointmentIds = Array.from(new Set(queueEntries.map((entry) => entry.appointmentId))).filter(
