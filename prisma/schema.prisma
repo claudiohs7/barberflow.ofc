@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
+  url      = localhost("mysql://u675967597_claudiohs:Flow_2025@localhost:3306/u675967597_barberflow")
 }
 
 model announcement {
