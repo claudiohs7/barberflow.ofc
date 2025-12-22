@@ -50,7 +50,7 @@ export function Header() {
             </Button>
             <Button
               asChild
-              className="bg-emerald-500 text-white transition-transform duration-300 hover:scale-105 hover:bg-emerald-600 hover:shadow-lg"
+              className="bg-pink-500 text-white transition-transform duration-300 hover:scale-105 hover:bg-pink-600 hover:shadow-lg"
             >
               <Link href="/auth/admin/register">Comecar</Link>
             </Button>
@@ -94,7 +94,7 @@ export function Header() {
                     <Button variant="ghost" asChild>
                         <Link href="/auth/login">Entrar</Link>
                     </Button>
-                    <Button asChild className="bg-emerald-500 text-white hover:bg-emerald-600">
+                    <Button asChild className="bg-pink-500 text-white hover:bg-pink-600">
                         <Link href="/auth/admin/register">Comecar</Link>
                     </Button>
                 </div>
