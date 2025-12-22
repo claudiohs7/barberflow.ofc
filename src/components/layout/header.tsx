@@ -50,7 +50,7 @@ export function Header() {
             </Button>
             <Button
               asChild
-              className="bg-blue-600 text-white transition-transform duration-300 hover:scale-105 hover:bg-blue-700 hover:shadow-lg"
+              className="bg-emerald-500 text-white transition-transform duration-300 hover:scale-105 hover:bg-emerald-600 hover:shadow-lg"
             >
               <Link href="/auth/admin/register">Comecar</Link>
             </Button>
@@ -90,11 +90,11 @@ export function Header() {
                     </Link>
                   </>
                 )}
-                 <div className="flex flex-col gap-2 pt-4">
+                <div className="flex flex-col gap-2 pt-4">
                     <Button variant="ghost" asChild>
                         <Link href="/auth/login">Entrar</Link>
                     </Button>
-                    <Button asChild className="bg-blue-600 text-white hover:bg-blue-700">
+                    <Button asChild className="bg-emerald-500 text-white hover:bg-emerald-600">
                         <Link href="/auth/admin/register">Comecar</Link>
                     </Button>
                 </div>
