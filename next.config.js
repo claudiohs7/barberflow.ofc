@@ -9,6 +9,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  turbopack: {
+    // Define explicit workspace root to silence the multiple lockfiles warning
+    root: __dirname,
+  },
   // Permite servir o app em um subcaminho (ex.: /barberflow) quando configurado no ambiente
   basePath: normalizedBasePath || undefined,
   images: {
