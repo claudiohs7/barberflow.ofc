@@ -1,6 +1,9 @@
 import fs from "fs";
 import path from "path";
 
+// Garante que este arquivo rode apenas no runtime Node.js (Turbopack tenta usar Edge por padrão)
+export const runtime = "nodejs";
+
 const LOG_DIR = path.join(process.cwd(), "logs");
 const LOG_FILE = path.join(LOG_DIR, "error.log");
 let isRegistered = false;
