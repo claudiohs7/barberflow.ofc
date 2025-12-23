@@ -163,7 +163,29 @@ export default function WhatsAppPage() {
         throw new Error(json.message || "Não foi possível validar a instância.");
       }
       const nextStatus = (json.status as WhatsAppStatus) || barbershop?.whatsappStatus;
-      const nextQr = json.data?.qrCode || json.data?.qr || json.qrCodeBase64 || null;
+      const nextQr =
+        json.qrCodeBase64 ||
+        json.data?.qrCode ||
+        json.data?.qrCodeBase64 ||
+        json.data?.qr ||
+        json.data?.qrcode ||
+        json.data?.qr_code ||
+        json.data?.conexao?.qrCode ||
+        json.data?.conexao?.qrCodeBase64 ||
+        json.data?.conexao?.qr ||
+        json.data?.conexao?.qrcode ||
+        json.data?.conexao?.qr_code ||
+        json.data?.conexao?.instance?.qrCode ||
+        json.data?.conexao?.instance?.qrCodeBase64 ||
+        json.data?.conexao?.instance?.qr ||
+        json.data?.conexao?.instance?.qrcode ||
+        json.data?.conexao?.instance?.qr_code ||
+        json.data?.instance?.qrCode ||
+        json.data?.instance?.qrCodeBase64 ||
+        json.data?.instance?.qr ||
+        json.data?.instance?.qrcode ||
+        json.data?.instance?.qr_code ||
+        null;
       setBarbershop((prev) =>
         prev
           ? {

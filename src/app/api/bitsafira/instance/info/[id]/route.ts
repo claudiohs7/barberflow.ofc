@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBitSafiraApiClient } from "@/lib/bitsafira/api";
 import type { GetInstanceInfoResponse } from "@/lib/bitsafira/types";
 import { getBarbershopById, updateBarbershop } from "@/server/db/repositories/barbershops";
+import { extractBitSafiraStatus, extractQrCode, mapBitSafiraStatus } from "@/lib/bitsafira/status";
 
 type Params = { params: Promise<{ id?: string }> };
 
@@ -39,11 +40,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     console.log("Resultado da consulta de instancia:", result);
 
     if (result.status === 200 && result.dados) {
+      const statusFromApi = extractBitSafiraStatus(result.dados);
+      const normalizedStatus = mapBitSafiraStatus(statusFromApi);
+      const qrCodeBase64 = extractQrCode(result.dados);
       await updateBarbershop(barbershopId, {
-        whatsappStatus: result.dados.status,
-        qrCodeBase64: result.dados.qrCode || null,
+        whatsappStatus: normalizedStatus,
+        qrCodeBase64: normalizedStatus === "CONNECTED" ? null : qrCodeBase64 ?? null,
       });
-      return NextResponse.json({ success: true, data: result.dados }, { status: 200 });
+      return NextResponse.json(
+        { success: true, data: { ...result.dados, status: normalizedStatus, qrCode: qrCodeBase64 } },
+        { status: 200 },
+      );
     }
 
     return NextResponse.json(

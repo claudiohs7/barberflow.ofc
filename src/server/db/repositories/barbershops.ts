@@ -56,6 +56,18 @@ function normalizeDate(value?: Date | string | null) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function parseJsonField<T>(value: unknown): T | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  return value as T;
+}
+
 async function findExistingBarbershopByCpfCnpj(normalizedCpfCnpj: string, excludeId?: string) {
   const matches = await prisma.barbershop.findMany({
     where: {
@@ -81,8 +93,8 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
     plan: shop.plan === "PREMIUM" ? "Premium" : "B├ísico",
     status: mapStatusToDomain(shop.status) as Barbershop["status"],
     expiryDate: shop.expiryDate?.toISOString(),
-    address: (shop.addressJson as Address | null) ?? undefined,
-    operatingHours: (shop.operatingHoursJson as OperatingHour[] | null) ?? undefined,
+    address: parseJsonField<Address>(shop.addressJson),
+    operatingHours: parseJsonField<OperatingHour[]>(shop.operatingHoursJson),
     logoUrl: shop.logoUrl ?? undefined,
     whatsappStatus: shop.whatsappStatus as Barbershop["whatsappStatus"],
     qrCodeBase64: shop.qrCodeBase64 ?? undefined,
@@ -161,6 +173,18 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
   }
 
   const expiryDate = normalizeDate(data.expiryDate);
+  const addressJson =
+    data.address === undefined ? undefined : data.address ? JSON.stringify(data.address) : null;
+  const operatingHoursJson =
+    data.operatingHours === undefined ? undefined : data.operatingHours ? JSON.stringify(data.operatingHours) : null;
+  const bitsafiraInstanceData =
+    data.bitsafiraInstanceData === undefined
+      ? undefined
+      : data.bitsafiraInstanceData === null
+        ? null
+        : typeof data.bitsafiraInstanceData === "string"
+          ? data.bitsafiraInstanceData
+          : JSON.stringify(data.bitsafiraInstanceData);
 
   const updated = await prisma.barbershop.update({
     where: { id },
@@ -175,15 +199,15 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
       plan: data.plan ? mapPlan(data.plan) : undefined,
       status: mapStatusToDb(data.status),
       expiryDate,
-      addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
-      operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
+      addressJson,
+      operatingHoursJson,
       logoUrl: data.logoUrl,
       whatsappStatus: data.whatsappStatus,
       qrCodeBase64: data.qrCodeBase64,
       bitsafiraInstanceId: data.bitsafiraInstanceId,
       bitSafiraToken: data.bitSafiraToken,
       whatsAppInstanceId: data.whatsAppInstanceId,
-      bitsafiraInstanceData: data.bitsafiraInstanceData,
+      bitsafiraInstanceData,
     },
     include: { messageTemplates: true },
   });

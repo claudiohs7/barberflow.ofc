@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { CreateInstancePayload, GetInstanceInfoResponse } from '@/lib/bitsafira/types';
 import { getBarbershopById, updateBarbershop } from '@/server/db/repositories/barbershops';
-import {
-  mapBitSafiraStatus,
-  extractBitSafiraStatus,
-  normalizeQrCodeBase64,
-} from '@/lib/bitsafira/status';
+import { mapBitSafiraStatus, extractBitSafiraStatus, extractQrCode } from '@/lib/bitsafira/status';
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +70,7 @@ export async function POST(request: NextRequest) {
 
       const statusFromApi = extractBitSafiraStatus(result.dados);
       const normalizedStatus = mapBitSafiraStatus(statusFromApi);
-      const qrCodeValue = normalizeQrCodeBase64(result.dados.qrCode || result.dados.qr);
+      const qrCodeValue = extractQrCode(result.dados);
       const hasStatusChanged = barbershop.whatsappStatus !== normalizedStatus;
       const hasQrChanged = (qrCodeValue ?? null) !== (barbershop.qrCodeBase64 ?? null);
       const missingInstanceInDb = !barbershop.bitsafiraInstanceId && result.dados.id;

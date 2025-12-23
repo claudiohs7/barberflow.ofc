@@ -39,15 +39,19 @@ export function mapBitSafiraStatus(status?: string): WhatsAppStatus {
 /**
  * Extrai o status reportado pelo BitSafira tentando cobrir os diferentes formatos de resposta.
  */
-export function extractBitSafiraStatus(payload?: { status?: string; conexao?: { status?: string } }) {
+type MaybeStatusPayload = {
+  status?: string;
+  conexao?: { status?: string; instance?: { status?: string } };
+  instance?: { status?: string };
+};
+
+export function extractBitSafiraStatus(payload?: MaybeStatusPayload) {
   if (!payload) return undefined;
-  return payload.status ?? payload.conexao?.status;
+  return payload.status ?? payload.conexao?.status ?? payload.conexao?.instance?.status ?? payload.instance?.status;
 }
 
 export function normalizeQrCodeBase64(value?: string | null) {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const trimmed = value.trim();
   const commaIndex = trimmed.indexOf(",");
@@ -56,4 +60,41 @@ export function normalizeQrCodeBase64(value?: string | null) {
   }
 
   return trimmed;
+}
+
+export function extractQrCode(payload: any): string | null | undefined {
+  if (!payload) return null;
+  const candidates = [
+    payload.qrCode,
+    payload.qrCodeBase64,
+    payload.qr,
+    payload.qrcode,
+    payload.qr_code,
+    payload.qrcodeBase64,
+    payload.qr_base64,
+    payload.conexao?.qrCode,
+    payload.conexao?.qrCodeBase64,
+    payload.conexao?.qr,
+    payload.conexao?.qrcode,
+    payload.conexao?.qr_code,
+    payload.conexao?.qrcodeBase64,
+    payload.conexao?.qr_base64,
+    payload.conexao?.instance?.qrCode,
+    payload.conexao?.instance?.qrCodeBase64,
+    payload.conexao?.instance?.qr,
+    payload.conexao?.instance?.qrcode,
+    payload.conexao?.instance?.qr_code,
+    payload.conexao?.instance?.qrcodeBase64,
+    payload.conexao?.instance?.qr_base64,
+    payload.instance?.qrCode,
+    payload.instance?.qrCodeBase64,
+    payload.instance?.qr,
+    payload.instance?.qrcode,
+    payload.instance?.qr_code,
+    payload.instance?.qrcodeBase64,
+    payload.instance?.qr_base64,
+  ];
+
+  const found = candidates.find((v) => typeof v === "string" && v.trim().length > 0);
+  return normalizeQrCodeBase64(found);
 }

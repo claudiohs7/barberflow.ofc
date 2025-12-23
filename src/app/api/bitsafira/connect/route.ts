@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getBitSafiraApiClient } from '@/lib/bitsafira/api';
 import { CreateInstancePayload, ConnectInstancePayload } from '@/lib/bitsafira/types';
-import { mapBitSafiraStatus, extractBitSafiraStatus, normalizeQrCodeBase64 } from '@/lib/bitsafira/status';
+import { mapBitSafiraStatus, extractBitSafiraStatus, extractQrCode } from '@/lib/bitsafira/status';
 import {
   getBarbershopById,
   updateBarbershop,
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
         const normalizedConnectStatus = mapBitSafiraStatus(statusFromConnect);
         console.log(`[${barbershopId}] Status retornado pela conexao: ${statusFromConnect} (normalizado: ${normalizedConnectStatus})`);
         currentInstanceStatus = normalizedConnectStatus;
-        qrCodeBase64 = normalizeQrCodeBase64(dados.qrCode || dados.qr) ?? qrCodeBase64;
+        qrCodeBase64 = extractQrCode(dados) ?? qrCodeBase64;
         if (normalizedConnectStatus === 'CONNECTED') {
           qrCodeBase64 = null;
         }
@@ -132,6 +132,23 @@ export async function POST(request: Request) {
         console.error(`[${barbershopId}] Falha ao conectar instancia ou obter QR Code:`, connectResponse.mensagem || connectResponse.message);
         currentInstanceStatus = 'ERROR';
         qrCodeBase64 = null;
+      }
+
+      // Fallback: tentar obter info da instância para capturar QR se ainda não veio e não está conectado
+      if (!qrCodeBase64 && currentInstanceStatus !== 'CONNECTED') {
+        try {
+          const infoResp = await bitSafira.getInstanceInfo(instanceId);
+          if (infoResp.status === 200 && infoResp.dados) {
+            const statusFromInfo = extractBitSafiraStatus(infoResp.dados);
+            currentInstanceStatus = mapBitSafiraStatus(statusFromInfo) || currentInstanceStatus;
+            const qrFromInfo = extractQrCode(infoResp.dados);
+            if (qrFromInfo) {
+              qrCodeBase64 = qrFromInfo;
+            }
+          }
+        } catch (error: any) {
+          console.warn(`[${barbershopId}] Fallback getInstanceInfo falhou:`, error?.message);
+        }
       }
 
       await updateBarbershop(barbershop.id, {
