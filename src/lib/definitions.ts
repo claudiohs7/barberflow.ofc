@@ -129,6 +129,7 @@ export type Appointment = {
   totalDuration?: number;
   createdAt?: Date;
   updatedAt?: Date;
+  createdBy?: "client" | "barbershop";
 };
 
 export type Expense = {

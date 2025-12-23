@@ -8,6 +8,7 @@ import { buildHeroFileName, ensureDir, getExtFromMime, getSiteAssetsDir, safeFil
 import { getSiteAppearance, upsertSiteAppearance } from "@/server/db/repositories/site-appearance";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function getAuthPayload(req: Request) {
   const authHeader = req.headers.get("Authorization") || "";

@@ -81,6 +81,7 @@ export type Appointment = {
   endTime: Date;
   status: 'confirmed' | 'cancelled' | 'completed';
   totalDuration?: number;
+  createdBy?: "client" | "barbershop";
 };
 
 export type Expense = {

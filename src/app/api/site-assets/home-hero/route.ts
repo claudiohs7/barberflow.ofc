@@ -6,6 +6,7 @@ import { getMimeFromExt } from "@/lib/site-assets";
 import { getSiteAppearance } from "@/server/db/repositories/site-appearance";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function pickVariant(req: NextRequest): "desktop" | "mobile" {
   const v = (req.nextUrl.searchParams.get("variant") || "desktop").toLowerCase();
