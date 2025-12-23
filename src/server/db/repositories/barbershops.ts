@@ -113,28 +113,37 @@ export async function createBarbershop(data: BarbershopCreateInput) {
     }
   }
 
+  const addressJson = data.address ? JSON.stringify(data.address) : null;
+  const operatingHoursJson = data.operatingHours ? JSON.stringify(data.operatingHours) : null;
+  const bitsafiraInstanceData =
+    data.bitsafiraInstanceData === undefined
+      ? null
+      : typeof data.bitsafiraInstanceData === "string"
+        ? data.bitsafiraInstanceData
+        : JSON.stringify(data.bitsafiraInstanceData);
+
   const created = await prisma.barbershop.create({
     data: {
       id: barbershopId,
       name: data.name,
-      legalName: data.legalName,
-      cpfCnpj: normalizedCpfCnpj || data.cpfCnpj,
-      email: data.email,
-      phone: data.phone,
-      description: data.description,
-      ownerId: data.ownerId,
+      legalName: data.legalName ?? null,
+      cpfCnpj: normalizedCpfCnpj ?? data.cpfCnpj ?? null,
+      email: data.email ?? null,
+      phone: data.phone ?? null,
+      description: data.description ?? null,
+      ownerId: data.ownerId ?? null,
       plan: mapPlan(data.plan) as any,
-      status: mapStatusToDb(data.status),
-      expiryDate,
-      addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
-      operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
-      logoUrl: data.logoUrl,
-      whatsappStatus: data.whatsappStatus,
-      qrCodeBase64: data.qrCodeBase64,
-      bitsafiraInstanceId: data.bitsafiraInstanceId ?? undefined,
-      bitSafiraToken: data.bitSafiraToken ?? undefined,
-      whatsAppInstanceId: data.whatsAppInstanceId ?? undefined,
-      bitsafiraInstanceData: data.bitsafiraInstanceData ?? undefined,
+      status: mapStatusToDb(data.status) ?? null,
+      expiryDate: expiryDate ?? null,
+      addressJson,
+      operatingHoursJson,
+      logoUrl: data.logoUrl ?? null,
+      whatsappStatus: data.whatsappStatus ?? null,
+      qrCodeBase64: data.qrCodeBase64 ?? null,
+      bitsafiraInstanceId: data.bitsafiraInstanceId ?? null,
+      bitSafiraToken: data.bitSafiraToken ?? null,
+      whatsAppInstanceId: data.whatsAppInstanceId ?? null,
+      bitsafiraInstanceData,
     },
     include: { messageTemplates: true },
   });
