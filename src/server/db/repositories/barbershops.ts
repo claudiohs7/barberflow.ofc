@@ -56,18 +56,6 @@ function normalizeDate(value?: Date | string | null) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function parseJsonField<T>(value: unknown): T | undefined {
-  if (!value) return undefined;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value) as T;
-    } catch {
-      return undefined;
-    }
-  }
-  return value as T;
-}
-
 async function findExistingBarbershopByCpfCnpj(normalizedCpfCnpj: string, excludeId?: string) {
   const matches = await prisma.barbershop.findMany({
     where: {
@@ -93,8 +81,8 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
     plan: shop.plan === "PREMIUM" ? "Premium" : "B├ísico",
     status: mapStatusToDomain(shop.status) as Barbershop["status"],
     expiryDate: shop.expiryDate?.toISOString(),
-    address: parseJsonField<Address>(shop.addressJson),
-    operatingHours: parseJsonField<OperatingHour[]>(shop.operatingHoursJson),
+    address: (shop.addressJson as Address | null) ?? undefined,
+    operatingHours: (shop.operatingHoursJson as OperatingHour[] | null) ?? undefined,
     logoUrl: shop.logoUrl ?? undefined,
     whatsappStatus: shop.whatsappStatus as Barbershop["whatsappStatus"],
     qrCodeBase64: shop.qrCodeBase64 ?? undefined,
@@ -125,37 +113,28 @@ export async function createBarbershop(data: BarbershopCreateInput) {
     }
   }
 
-  const addressJson = data.address ? JSON.stringify(data.address) : null;
-  const operatingHoursJson = data.operatingHours ? JSON.stringify(data.operatingHours) : null;
-  const bitsafiraInstanceData =
-    data.bitsafiraInstanceData === undefined
-      ? null
-      : typeof data.bitsafiraInstanceData === "string"
-        ? data.bitsafiraInstanceData
-        : JSON.stringify(data.bitsafiraInstanceData);
-
   const created = await prisma.barbershop.create({
     data: {
       id: barbershopId,
       name: data.name,
-      legalName: data.legalName ?? null,
-      cpfCnpj: normalizedCpfCnpj ?? data.cpfCnpj ?? null,
-      email: data.email ?? null,
-      phone: data.phone ?? null,
-      description: data.description ?? null,
-      ownerId: data.ownerId ?? null,
+      legalName: data.legalName,
+      cpfCnpj: normalizedCpfCnpj || data.cpfCnpj,
+      email: data.email,
+      phone: data.phone,
+      description: data.description,
+      ownerId: data.ownerId,
       plan: mapPlan(data.plan) as any,
-      status: mapStatusToDb(data.status) ?? null,
-      expiryDate: expiryDate ?? null,
-      addressJson,
-      operatingHoursJson,
-      logoUrl: data.logoUrl ?? null,
-      whatsappStatus: data.whatsappStatus ?? null,
-      qrCodeBase64: data.qrCodeBase64 ?? null,
-      bitsafiraInstanceId: data.bitsafiraInstanceId ?? null,
-      bitSafiraToken: data.bitSafiraToken ?? null,
-      whatsAppInstanceId: data.whatsAppInstanceId ?? null,
-      bitsafiraInstanceData,
+      status: mapStatusToDb(data.status),
+      expiryDate,
+      addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
+      operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
+      logoUrl: data.logoUrl,
+      whatsappStatus: data.whatsappStatus,
+      qrCodeBase64: data.qrCodeBase64,
+      bitsafiraInstanceId: data.bitsafiraInstanceId ?? undefined,
+      bitSafiraToken: data.bitSafiraToken ?? undefined,
+      whatsAppInstanceId: data.whatsAppInstanceId ?? undefined,
+      bitsafiraInstanceData: data.bitsafiraInstanceData ?? undefined,
     },
     include: { messageTemplates: true },
   });
@@ -173,18 +152,6 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
   }
 
   const expiryDate = normalizeDate(data.expiryDate);
-  const addressJson =
-    data.address === undefined ? undefined : data.address ? JSON.stringify(data.address) : null;
-  const operatingHoursJson =
-    data.operatingHours === undefined ? undefined : data.operatingHours ? JSON.stringify(data.operatingHours) : null;
-  const bitsafiraInstanceData =
-    data.bitsafiraInstanceData === undefined
-      ? undefined
-      : data.bitsafiraInstanceData === null
-        ? null
-        : typeof data.bitsafiraInstanceData === "string"
-          ? data.bitsafiraInstanceData
-          : JSON.stringify(data.bitsafiraInstanceData);
 
   const updated = await prisma.barbershop.update({
     where: { id },
@@ -199,15 +166,15 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
       plan: data.plan ? mapPlan(data.plan) : undefined,
       status: mapStatusToDb(data.status),
       expiryDate,
-      addressJson,
-      operatingHoursJson,
+      addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
+      operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
       logoUrl: data.logoUrl,
       whatsappStatus: data.whatsappStatus,
       qrCodeBase64: data.qrCodeBase64,
       bitsafiraInstanceId: data.bitsafiraInstanceId,
       bitSafiraToken: data.bitSafiraToken,
       whatsAppInstanceId: data.whatsAppInstanceId,
-      bitsafiraInstanceData,
+      bitsafiraInstanceData: data.bitsafiraInstanceData,
     },
     include: { messageTemplates: true },
   });

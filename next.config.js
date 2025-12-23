@@ -3,10 +3,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Fixa a raiz para evitar warning do Turbopack com múltiplos package-lock.
-  turbopack: {
-    root: __dirname,
-  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'placeholder.co', pathname: '/**' },
