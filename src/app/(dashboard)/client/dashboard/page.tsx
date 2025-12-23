@@ -294,7 +294,7 @@ export default function ClientDashboardHomePage() {
                 </CardContent>
                 <CardFooter className="p-4 bg-muted/50">
                   <Button asChild className="w-full">
-                        <Link href={`/agendar/${shop.id || slugify(shop.name)}`}>
+                        <Link href={`/agendar/${slugify(shop.name)}`}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       Agendar
                     </Link>

@@ -1260,7 +1260,7 @@ const deleteAppt = async (id: string) => {
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => handleEditClick(appointment)}
-                                      className="text-primary hover:text-primary h-8 w-8"
+                                      className="text-primary hover:bg-primary hover:text-primary-foreground h-8 w-8 transition-colors"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>

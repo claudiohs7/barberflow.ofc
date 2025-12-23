@@ -238,10 +238,13 @@ export default function ClientsPage() {
   const formatPhone = (phone: string) => {
     const digits = phoneDigits(phone);
     if (digits.length < 10) return phone;
-    const ddd = digits.slice(0, 2);
-    const middle = digits.length === 11 ? digits.slice(2, 7) : digits.slice(2, 6);
-    const end = digits.length === 11 ? digits.slice(7) : digits.slice(6);
-    return `(${ddd}) ${middle}-${end}`;
+    const normalized = digits.slice(0, 11);
+    const ddd = normalized.slice(0, 2);
+    const hasEleven = normalized.length === 11;
+    const nine = hasEleven ? normalized.slice(2, 3) : "";
+    const middle = hasEleven ? normalized.slice(3, 7) : normalized.slice(2, 6);
+    const end = hasEleven ? normalized.slice(7) : normalized.slice(6);
+    return hasEleven ? `(${ddd}) ${nine} ${middle}-${end}` : `(${ddd}) ${middle}-${end}`;
   };
 
   const resetClientForms = () => {
@@ -600,11 +603,15 @@ export default function ClientsPage() {
 
   const filteredClients = useMemo(() => {
     if (!data.clients) return [];
-    if (!searchTerm) return data.clients;
-    const term = searchTerm.toLowerCase();
-    return data.clients.filter(
-      (c) => c.name.toLowerCase().includes(term) || c.phone.replace(/\D/g, "").includes(term.replace(/\D/g, ""))
-    );
+    if (!searchTerm.trim()) return data.clients;
+    const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
+    const digits = searchTerm.replace(/\D/g, "");
+    return data.clients.filter((c) => {
+      const nameMatch = (c.name || "").toLowerCase().includes(normalized);
+      const phoneDigits = (c.phone || "").replace(/\D/g, "");
+      const phoneMatch = digits ? phoneDigits.includes(digits) : false;
+      return nameMatch || phoneMatch;
+    });
   }, [data.clients, searchTerm]);
 
   return (
@@ -692,8 +699,13 @@ export default function ClientsPage() {
                         <WhatsAppIcon className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleEditClick(client)} className="text-primary hover:text-primary">
-                      <Edit className="h-4 w-4" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditClick(client)}
+                      className="text-primary hover:text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Edit className="h-4 w-4 group-hover:text-primary-foreground" />
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(client)}>
                       <Trash2 className="h-4 w-4" />

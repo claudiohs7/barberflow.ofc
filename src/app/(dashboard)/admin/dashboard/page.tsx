@@ -277,9 +277,7 @@ export default function AdminDashboardPage() {
     const [bookingLink, setBookingLink] = useState('');
 
     useEffect(() => {
-        const idSegment = barbershopData?.id;
-        const fallbackSlug = barbershopData?.name ? slugify(barbershopData.name) : "";
-        const slugSegment = idSegment || fallbackSlug;
+        const slugSegment = barbershopData?.name ? slugify(barbershopData.name) : barbershopData?.id || "";
         if (slugSegment) {
             const safeSegment = encodeURIComponent(slugSegment);
             const relative = `/agendar/${safeSegment}`;

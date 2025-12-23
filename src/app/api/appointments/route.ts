@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       endTime: new Date(body.endTime),
       status: body.status,
       totalDuration: body.totalDuration,
+      createdBy: body.createdBy,
     });
     try {
       await syncReminderQueueForAppointment(created);

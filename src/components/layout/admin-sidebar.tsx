@@ -113,7 +113,8 @@ export function AdminSidebar() {
           `/api/appointments?barbershopId=${encodeURIComponent(barbershopId)}&createdAfter=${encodeURIComponent(since)}`
         );
         const json = await res.json().catch(() => ({ data: [] }));
-        const count = Array.isArray((json as any)?.data) ? (json as any).data.length : 0;
+        const list = Array.isArray((json as any)?.data) ? (json as any).data : [];
+        const count = list.filter((appt: any) => appt?.createdBy === "client").length;
         if (!isCancelled) setNewScheduleCount(count);
       } catch (error) {
         if (!isCancelled) setNewScheduleCount(0);

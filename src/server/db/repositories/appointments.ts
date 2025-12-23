@@ -14,6 +14,7 @@ type AppointmentInput = {
   endTime: Date;
   status?: AppointmentStatus;
   totalDuration?: number;
+  createdBy?: "barbershop" | "client";
 };
 
 function mapStatus(status?: AppointmentStatus): $Enums.AppointmentStatus {
@@ -52,6 +53,7 @@ function toDomain(model: Prisma.AppointmentGetPayload<{ include: { services: tru
     totalDuration: model.totalDuration ?? undefined,
     createdAt: model.createdAt,
     updatedAt: model.updatedAt,
+    createdBy: (model as any).createdBy ?? undefined,
   };
 }
 
@@ -144,6 +146,7 @@ export async function createAppointment(input: AppointmentInput) {
       startTime: input.startTime,
       endTime: input.endTime,
       totalDuration: input.totalDuration,
+      ...(input.createdBy ? { createdBy: input.createdBy } : {}),
       services: {
         create: input.serviceIds.map((serviceId) => ({ serviceId })),
       },
