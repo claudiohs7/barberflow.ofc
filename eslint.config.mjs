@@ -2,7 +2,7 @@ import nextConfig from "eslint-config-next";
 
 const config = [
   {
-    ignores: ["**/node_modules/**", ".next/**", "dist/**", "out/**"],
+    ignores: ["**/node_modules/**", ".next/**", ".next.bak*/**", "dist/**", "out/**"],
   },
   ...nextConfig,
   {

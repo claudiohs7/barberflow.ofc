@@ -216,7 +216,7 @@ export default function WhatsAppTemplatesPage() {
         isSavingRef.current = false;
       }
     },
-    [barbershopId, syncTemplates, toast]
+    [barbershopId, barbershop, syncTemplates, toast]
   );
 
   useEffect(() => {

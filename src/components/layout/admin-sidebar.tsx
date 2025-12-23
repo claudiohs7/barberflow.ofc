@@ -82,7 +82,7 @@ export function AdminSidebar() {
     return () => {
       isMounted = false;
     };
-  }, [barbershopId, pathname]);
+  }, [barbershopId, pathname, barbershopData]);
 
   useEffect(() => {
     if (!barbershopId) return;
