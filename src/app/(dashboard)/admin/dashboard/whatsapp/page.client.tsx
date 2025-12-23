@@ -90,7 +90,6 @@ export default function WhatsAppPage() {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isMissingInstanceDialogOpen, setIsMissingInstanceDialogOpen] = useState(false);
   const [qrGeneratedAt, setQrGeneratedAt] = useState<number | null>(null);
-  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const statusRef = useRef<WhatsAppStatus | null | undefined>(barbershop?.whatsappStatus);
 
   const statusInfo = getStatusInfo(barbershop?.whatsappStatus);
@@ -214,7 +213,6 @@ export default function WhatsAppPage() {
         const shop = response.data;
         setBarbershop(shop);
         const isBasicPlan = (shop?.plan || "").toLowerCase().startsWith("b");
-        setIsPlanDialogOpen(isBasicPlan);
 
         if (opts.withStatusValidate) {
           // dispara validação de status ao entrar na aba, para trazer conexão atualizada
@@ -305,21 +303,6 @@ export default function WhatsAppPage() {
   if (isBasicPlan) {
     return (
       <>
-        <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Recurso disponível no plano Premium</DialogTitle>
-              <DialogDescription>
-                Para usar o WhatsApp automático, altere o plano da barbearia para Premium.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-2">
-              <Button asChild>
-                <Link href="/admin/dashboard/subscription">Ir para Plano e Assinatura</Link>
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
         <div className="flex h-[60vh] items-center justify-center">
           <Card className="max-w-xl">
             <CardHeader>

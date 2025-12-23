@@ -16,31 +16,66 @@ import { fetchJson } from "@/lib/fetcher";
 
 function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
   const { barbershopId, isLoading: isBarbershopIdLoading } = useBarbershopId();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const [barbershopData, setBarbershopData] = useState<Barbershop | null>(null);
   const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(false);
+  const [isHandlingRemoval, setIsHandlingRemoval] = useState(false);
 
-  const loadBarbershop = useCallback(async () => {
+  const handleBarbershopRemoval = useCallback(
+    async (message?: string) => {
+      if (isHandlingRemoval) return;
+      setIsHandlingRemoval(true);
+      try {
+        await signOut();
+      } catch (error) {
+        console.error("Erro ao deslogar apos remocao da barbearia:", error);
+      } finally {
+        toast({
+          variant: "destructive",
+          title: "Barbearia removida",
+          description: message ?? "Sua conta foi desconectada porque a barbearia nao existe mais.",
+        });
+        router.push("/auth/admin/login");
+      }
+    },
+    [isHandlingRemoval, signOut, toast, router]
+  );
+
+  const loadBarbershop = useCallback(
+    async (options?: { silent?: boolean }) => {
+    if (isAuthLoading || isBarbershopIdLoading) return;
     if (!barbershopId) {
       setBarbershopData(null);
-      setIsLoadingBarbershop(false);
+      if (!options?.silent) setIsLoadingBarbershop(false);
+      if (user) {
+        await handleBarbershopRemoval("A barbearia vinculada a esta conta foi removida.");
+      }
       return;
     }
-    setIsLoadingBarbershop(true);
+    if (!options?.silent) setIsLoadingBarbershop(true);
     try {
-      const response = await fetchJson<{ data: Barbershop[] }>(
-        `/api/barbershops?ownerId=${encodeURIComponent(barbershopId)}`
-      );
-      setBarbershopData(response.data?.[0] ?? null);
-    } catch {
+      const response = await fetchJson<{ data: Barbershop }>(`/api/barbershops/${encodeURIComponent(barbershopId)}`);
+      setBarbershopData(response.data ?? null);
+      if (!response.data && user) {
+        await handleBarbershopRemoval("A barbearia vinculada a esta conta foi removida.");
+      }
+    } catch (error: any) {
+      const message = (error?.message || "").toLowerCase();
+      if (message.includes("barbearia") && message.includes("encontrada")) {
+        await handleBarbershopRemoval("A barbearia vinculada a esta conta foi removida.");
+        return;
+      }
+      console.error("Erro ao carregar barbearia:", error);
       setBarbershopData(null);
     } finally {
-      setIsLoadingBarbershop(false);
+      if (!options?.silent) setIsLoadingBarbershop(false);
     }
-  }, [barbershopId]);
+    },
+    [barbershopId, handleBarbershopRemoval, isAuthLoading, isBarbershopIdLoading, user]
+  );
 
   useEffect(() => {
     void loadBarbershop();
@@ -48,9 +83,7 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handler = () => {
-      void loadBarbershop();
-      // força recomputar dados de página/rotas para refletir o que o super admin mudou
-      router.refresh();
+      void loadBarbershop({ silent: true });
     };
     const storageHandler = (event: StorageEvent) => {
       if (event.key === "barbershop-updated") {
@@ -63,7 +96,22 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
       window.removeEventListener("barbershop-updated", handler as EventListener);
       window.removeEventListener("storage", storageHandler);
     };
-  }, [loadBarbershop]); // router.refresh is stable; kept out to avoid dependency-size variation
+  }, [loadBarbershop, router]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void loadBarbershop({ silent: true });
+    };
+    const intervalId = window.setInterval(() => {
+      void loadBarbershop({ silent: true });
+    }, 60000);
+
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(intervalId);
+    };
+  }, [loadBarbershop]);
 
   // Ao trocar de aba/rota dentro do dashboard, revalida plano/status da barbearia
   useEffect(() => {
@@ -122,8 +170,3 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     </SidebarProvider>
   );
 }
-
-
-
-
-

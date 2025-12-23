@@ -1092,24 +1092,30 @@ const deleteAppt = async (id: string) => {
                       variant="outline"
                       onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : prev))}
                       disabled={currentStep === 1}
-                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[120px]"
                     >
                       Voltar
                     </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setCurrentStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev))}
-                      disabled={
-                        (currentStep === 1 && (!selectedClientId || (selectedClientId === "new" && (!newClientName.trim() || extractPhoneDigits(newClientPhone).length < 10)))) ||
-                        (currentStep === 2 && (!selectedBarberId || selectedServiceIds.size === 0))
-                      }
-                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
-                    >
-                      {currentStep === 3 ? "Pronto" : "Próximo"}
-                    </Button>
+                    {currentStep < 3 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setCurrentStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev))}
+                        disabled={
+                          (currentStep === 1 && (!selectedClientId || (selectedClientId === "new" && (!newClientName.trim() || extractPhoneDigits(newClientPhone).length < 10)))) ||
+                          (currentStep === 2 && (!selectedBarberId || selectedServiceIds.size === 0))
+                        }
+                        className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[120px]"
+                      >
+                        Próximo
+                      </Button>
+                    )}
                   </div>
-                  {currentStep === 3 && (
-                    <Button onClick={handleCreateAppointment} className="w-full transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                  {currentStep === 3 && selectedDate && selectedTime && (
+                    <Button
+                      onClick={handleCreateAppointment}
+                      disabled={!canCompleteStep3}
+                      className="w-full transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                    >
                       Cadastrar Agendamento
                     </Button>
                   )}
@@ -1388,7 +1394,7 @@ const deleteAppt = async (id: string) => {
                   {editStep === 2 && (
                     <Button
                       variant="outline"
-                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[120px]"
                       onClick={() => setEditStep(1)}
                     >
                       Voltar
@@ -1396,7 +1402,8 @@ const deleteAppt = async (id: string) => {
                   )}
                   {editStep === 1 ? (
                     <Button
-                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+                      variant="outline"
+                      className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[120px]"
                       onClick={() => setEditStep(2)}
                     >
                       Próximo
@@ -1404,11 +1411,11 @@ const deleteAppt = async (id: string) => {
                   ) : (
                     <>
                       <DialogClose asChild>
-                        <Button variant="outline" className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                        <Button variant="outline" className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[120px]">
                           Cancelar
                         </Button>
                       </DialogClose>
-                      <Button onClick={handleUpdateAppointment} className="transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                      <Button onClick={handleUpdateAppointment} className="transition-transform duration-300 hover:scale-105 hover:shadow-lg min-w-[140px]">
                         Salvar Alterações
                       </Button>
                     </>

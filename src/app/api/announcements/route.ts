@@ -6,7 +6,15 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const limitParam = searchParams.get("limit");
-    const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam))) : 5;
+    let limit = 10;
+    if (limitParam === "all") {
+      limit = 0;
+    } else if (limitParam) {
+      const parsed = Number(limitParam);
+      if (Number.isFinite(parsed)) {
+        limit = Math.max(1, Math.min(100, parsed));
+      }
+    }
     const data = await listAnnouncements(limit);
     return NextResponse.json({ data });
   } catch (error: any) {

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 
 import { Label } from "@/components/ui/label";
 
@@ -50,7 +51,7 @@ import {
 
 } from "@/components/ui/dialog";
 
-import { Crown, Sparkles, Edit, Save, Lock, Upload, Check, AlertCircle, ShoppingCart, Copy, Loader2, Info, QrCode, Eye, EyeOff, Building, CreditCard } from "lucide-react";
+import { Crown, Sparkles, Edit, Save, Lock, Upload, Check, AlertCircle, ShoppingCart, Copy, Loader2, Info, QrCode, Eye, EyeOff, Building, CreditCard, ZoomIn, MoveHorizontal, MoveVertical } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -363,6 +364,10 @@ export default function SettingsPage() {
   const [rawLogoImage, setRawLogoImage] = useState<string | null>(null);
 
   const [cropZoom, setCropZoom] = useState(1);
+
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+
+  const [cropOffsetY, setCropOffsetY] = useState(0);
 
   const [rawLogoDims, setRawLogoDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -723,6 +728,10 @@ const formCpfCnpj = formState.cpfCnpj || '';
 
         setCropZoom(1);
 
+        setCropOffsetX(0);
+
+        setCropOffsetY(0);
+
         setIsCropDialogOpen(true);
 
       };
@@ -766,6 +775,10 @@ const formCpfCnpj = formState.cpfCnpj || '';
     setRawLogoImage(null);
 
     setCropZoom(1);
+
+    setCropOffsetX(0);
+
+    setCropOffsetY(0);
 
     setRawLogoDims(null);
 
@@ -815,17 +828,25 @@ const formCpfCnpj = formState.cpfCnpj || '';
 
     const cropSize = Math.min(w, h) / cropZoom;
 
-    const sx = (w - cropSize) / 2;
+    const maxOffsetX = w - cropSize;
 
-    const sy = (h - cropSize) / 2;
+    const maxOffsetY = h - cropSize;
+
+    let sx = (w - cropSize) / 2 + cropOffsetX * maxOffsetX;
+
+    let sy = (h - cropSize) / 2 + cropOffsetY * maxOffsetY;
+
+    sx = Math.min(Math.max(0, sx), w - cropSize);
+
+    sy = Math.min(Math.max(0, sy), h - cropSize);
 
     ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, canvasSize, canvasSize);
 
     const dataUrl = canvas.toDataURL("image/png");
 
     setLogoPreview(dataUrl);
-
     handleFormChange("logoUrl", dataUrl);
+    setBarbershopData((prev) => (prev ? { ...prev, logoUrl: dataUrl } : prev));
 
     resetCropState();
 
@@ -1547,9 +1568,9 @@ const formCpfCnpj = formState.cpfCnpj || '';
 
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
 
-            <div className="relative w-full aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+            <div className="relative w-full aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-inner">
               {rawLogoImage ? (
                 <NextImage
                   src={rawLogoImage}
@@ -1557,35 +1578,59 @@ const formCpfCnpj = formState.cpfCnpj || '';
                   fill
                   sizes="(max-width: 768px) 100vw, 400px"
                   className="object-contain"
-                  style={{ transform: `scale(${cropZoom})`, transformOrigin: "center" }}
+                  style={{ transform: `translate(${cropOffsetX * 50}%, ${cropOffsetY * 50}%) scale(${cropZoom})`, transformOrigin: "center" }}
                   unoptimized
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Selecione uma imagem</div>
               )}
+              <div className="pointer-events-none absolute inset-4 rounded-lg border border-white/30 shadow-[0_0_0_9999px_rgba(2,6,23,0.6)]" />
             </div>
-            <div className="space-y-1">
-
-              <Label htmlFor="crop-zoom">Zoom</Label>
-
-              <Input
-
-                id="crop-zoom"
-
-                type="range"
-
-                min={1}
-
-                max={3}
-
-                step={0.1}
-
-                value={cropZoom}
-
-                onChange={(e) => setCropZoom(parseFloat(e.target.value))}
-
-              />
-
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <ZoomIn className="h-4 w-4 text-primary" />
+                  <Label htmlFor="crop-zoom" className="cursor-pointer">Zoom</Label>
+                </div>
+                <Slider
+                  id="crop-zoom"
+                  min={1}
+                  max={3}
+                  step={0.05}
+                  value={[cropZoom]}
+                  onValueChange={(val) => setCropZoom(val[0])}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <MoveHorizontal className="h-4 w-4 text-primary" />
+                    <Label htmlFor="crop-offset-x" className="cursor-pointer">Horizontal</Label>
+                  </div>
+                  <Slider
+                    id="crop-offset-x"
+                    min={-1}
+                    max={1}
+                    step={0.02}
+                    value={[cropOffsetX]}
+                    onValueChange={(val) => setCropOffsetX(val[0])}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <MoveVertical className="h-4 w-4 text-primary" />
+                    <Label htmlFor="crop-offset-y" className="cursor-pointer">Vertical</Label>
+                  </div>
+                  <Slider
+                    id="crop-offset-y"
+                    min={-1}
+                    max={1}
+                    step={0.02}
+                    value={[cropOffsetY]}
+                    onValueChange={(val) => setCropOffsetY(val[0])}
+                  />
+                </div>
+              </div>
             </div>
 
           </div>

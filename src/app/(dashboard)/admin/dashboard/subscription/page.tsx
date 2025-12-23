@@ -191,31 +191,32 @@ export default function SubscriptionPage() {
 
     const handleUpgradeClick = () => {
         const expiry = barbershopData?.expiryDate ? new Date(barbershopData.expiryDate) : null;
-        const today = new Date();
-        
-        if (!expiry || Number.isNaN(expiry.getTime()) || isBefore(expiry, today)) {
+        const today = startOfDay(new Date());
+        const normalizedExpiry = expiry ? startOfDay(expiry) : null;
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+        if (!normalizedExpiry || Number.isNaN(normalizedExpiry.getTime()) || isBefore(normalizedExpiry, today)) {
             setUpgradeCredit(0);
             setUpgradeCost(planPrices.Premium);
         } else {
-            const daysRemaining = differenceInDays(expiry, today);
-            const dailyCostBasic = 1.66; // 49.90 / 30
-            const dailyCostPremium = 3.99; // 119.90 / 30
-            
-            const credit = dailyCostBasic * daysRemaining;
-            const premiumCostForPeriod = dailyCostPremium * daysRemaining;
-            const finalCost = premiumCostForPeriod - credit;
-            
+            const rawDiff = Math.ceil((normalizedExpiry.getTime() - today.getTime()) / MS_PER_DAY);
+            const daysRemaining = Math.max(0, Math.min(30, rawDiff));
+            const dailyCostBasic = planPrices[BASIC_PLAN] / 30;
+            const creditRemaining = dailyCostBasic * daysRemaining;
+            const finalCost = planPrices.Premium - creditRemaining;
+            setUpgradeCredit(creditRemaining > 0 ? creditRemaining : 0);
             setUpgradeCost(finalCost > 0 ? finalCost : 0);
         }
-        
+
         setIsUpgradeModalOpen(true);
     };
 
     const notifyPaymentDisabled = () => {
-        toast({
-            title: "Pagamento indisponível",
-            description: "A integração de pagamento via Mercado Pago/PIX está desativada. Fale com o suporte para concluir o upgrade.",
-        });
+        const amount = formatCurrency(upgradeCost);
+        const message = `Olá, quero fazer o upgrade e pagar via PIX no valor de ${amount}.`;
+        const encoded = encodeURIComponent(message);
+        const whatsappNumber = "5531994371680";
+        window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank", "noopener,noreferrer");
     };
 
     if (isBarbershopIdLoading || isLoadingBarbershop) {
@@ -312,20 +313,19 @@ export default function SubscriptionPage() {
                         </CardHeader>
                         <CardContent className="text-center space-y-1">
                             {upgradeCredit > 0 && (
-                                <p className="text-sm text-green-500">Crédito de {formatCurrency(upgradeCredit)} (dias restantes do plano Básico) aplicado.</p>
+                                <p className="text-sm text-green-500">
+                                    Crédito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano Básico.
+                                </p>
                             )}
                             <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
                             <p className="text-xs text-muted-foreground">
-                            Valor proporcional para upgrade imediato. A próxima cobrança será o valor cheio do plano.
+                            Valor proporcional para upgrade imediato. A proxima cobranca sera o valor cheio do plano.
                             </p>
                         </CardContent>
                     </Card>
                     
                     <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4 text-center">
                         <p className="font-semibold">Pagamento via PIX desativado</p>
-                        <p className="text-sm text-muted-foreground">
-                            A integracao com Mercado Pago/PIX foi removida. Entre em contato com o suporte para concluir o upgrade.
-                        </p>
                         <Button className="w-full" variant="outline" onClick={notifyPaymentDisabled}>
                             Falar com o suporte
                         </Button>
@@ -341,5 +341,4 @@ export default function SubscriptionPage() {
     </div>
     );
 }
-
 

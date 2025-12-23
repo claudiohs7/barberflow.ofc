@@ -31,6 +31,20 @@ export function register() {
   if (isRegistered) return;
   isRegistered = true;
 
+  // Copia referência original para não perder logs no console da plataforma
+  const originalConsoleError = console.error.bind(console);
+
   process.on("uncaughtException", (err) => logError("uncaughtException", err));
   process.on("unhandledRejection", (reason) => logError("unhandledRejection", reason));
+
+  // Também intercepta todos os console.error para escrever em arquivo
+  console.error = (...args: any[]) => {
+    try {
+      const message = args.map((a) => (a instanceof Error ? a.stack || a.message : String(a))).join(" ");
+      logError("console.error", message);
+    } catch {
+      // ignore
+    }
+    originalConsoleError(...args);
+  };
 }

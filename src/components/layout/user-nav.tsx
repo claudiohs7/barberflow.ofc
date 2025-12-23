@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { fetchJson } from "@/lib/fetcher";
 import type { Barbershop, SystemMessage } from "@/lib/definitions";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -222,12 +223,20 @@ export function UserNav() {
       {!isSuperAdmin && (
         <Popover onOpenChange={(open) => open && handleNotificationsOpen()}>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-full">
+              <Bell
+                className={cn(
+                  "h-6 w-6 transition-transform duration-200",
+                  newMessagesCount > 0 ? "text-primary" : ""
+                )}
+              />
               {newMessagesCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
-                  {newMessagesCount}
-                </span>
+                <>
+                  <span className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive animate-ping" />
+                  <span className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg">
+                    {newMessagesCount}
+                  </span>
+                </>
               )}
               <span className="sr-only">Notificacoes</span>
             </Button>
