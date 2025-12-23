@@ -408,7 +408,7 @@ export default function Home() {
                 <Link
                   href="/auth/admin/register"
                   aria-describedby="tier-hobby"
-                  className="mt-8 block rounded-md px-3.5 py-2.5 text-center text-sm font-semibold text-primary ring-1 ring-inset ring-primary/50 hover:ring-primary sm:mt-10"
+                  className="mt-8 block rounded-md bg-primary px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:mt-10"
                   aria-label="Começar agora no plano Básico do BarberFlow"
                 >
                   Começar agora
