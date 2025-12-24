@@ -4682,7 +4682,7 @@ export default function ClientMyAppointmentsPage() {
 
 
 
-            slots.push(slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+            slots.push(slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
 
 
 
@@ -6986,7 +6986,11 @@ export default function ClientMyAppointmentsPage() {
 
 
 
-                                {appt.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {appt.startTime.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}
 
 
 
@@ -8198,7 +8202,11 @@ export default function ClientMyAppointmentsPage() {
 
 
 
-                {appointmentToCancel?.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {appointmentToCancel?.startTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
 
 
 

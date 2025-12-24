@@ -966,7 +966,7 @@ const buildTemplateMessage = (
 
 
 
-    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
 
 
 
@@ -2214,7 +2214,9 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
-            slots.push(slotStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+            slots.push(
+              slotStartTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+            );
 
 
 
@@ -3914,7 +3916,18 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
-                <strong>Horários:</strong> {confirmedAppointment.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} até {confirmedAppointment.endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <strong>Horários:</strong>{" "}
+                {confirmedAppointment.startTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}{" "}
+                até{" "}
+                {confirmedAppointment.endTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
 
 
 

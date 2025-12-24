@@ -246,7 +246,7 @@ export default function BarberSchedulePage() {
               : false;
           const hasConflict = existing.some((appt) => slotStart < appt.endTime && slotEnd > appt.startTime);
           if (!overlapsLunch && !hasConflict) {
-            slots.push(slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+            slots.push(slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
           }
           current = addMinutes(current, 15);
         }
@@ -367,8 +367,16 @@ export default function BarberSchedulePage() {
                   <div key={appt.id} className="p-3 rounded-md border">
                     <p className="font-semibold">{appt.clientName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {appt.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -{" "}
-                      {appt.endTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {appt.startTime.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })} -{" "}
+                      {appt.endTime.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
                     </p>
                     <p className="text-muted-foreground text-sm">{appt.serviceNames}</p>
                   </div>

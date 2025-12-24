@@ -466,8 +466,16 @@ export default function TicketsPage() {
                     <p className="whitespace-pre-wrap">{res.message}</p>
                     <p className="text-xs mt-2 text-right opacity-70">
                       {res.createdAt instanceof Date
-                        ? res.createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                        : new Date(res.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        ? res.createdAt.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })
+                        : new Date(res.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })}
                     </p>
                   </div>
                 </div>

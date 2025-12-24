@@ -122,7 +122,7 @@ const buildTemplateMessage = (
   message = message.replace("{data}", context.startTime.toLocaleDateString());
   message = message.replace(
     "{horario}",
-    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
   );
   message = message.replace("{barbeiro}", context.barberName || "");
   message = message.replace("{barbearia}", context.barbershopName || "sua barbearia");
@@ -553,7 +553,8 @@ export default function ClientsPage() {
       const overlaps = existing.some(
         (appt) => isWithinInterval(start, { start: appt.start, end: appt.end }) || isWithinInterval(appt.start, { start, end })
       );
-      if (!overlaps) slots.push(start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      if (!overlaps)
+        slots.push(start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
     }
     setAvailableTimeSlots(slots);
     setIsLoadingTimes(false);

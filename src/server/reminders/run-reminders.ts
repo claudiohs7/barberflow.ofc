@@ -99,7 +99,7 @@ function buildTemplateMessage(
   message = message.replace("{data}", context.startTime.toLocaleDateString());
   message = message.replace(
     "{horario}",
-    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
   );
   message = message.replace("{barbeiro}", context.barberName || "");
   message = message.replace("{barbearia}", context.barbershopName || "sua barbearia");

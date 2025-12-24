@@ -115,9 +115,9 @@ const formatBrazilPhone = (value: string) => {
 };
 
 const formatTimeRange = (start: Date, end?: Date | null) => {
-  const startLabel = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const startLabel = start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   if (!end) return startLabel;
-  const endLabel = end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const endLabel = end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   return `${startLabel} às ${endLabel}`;
 };
 
@@ -175,7 +175,7 @@ const buildTemplateMessage = (
   message = message.replace("{data}", context.startTime.toLocaleDateString());
   message = message.replace(
     "{horario}",
-    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    context.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
   );
   message = message.replace("{barbeiro}", context.barberName || "");
   message = message.replace("{barbearia}", context.barbershopName || "sua barbearia");
@@ -645,7 +645,9 @@ const deleteAppt = async (id: string) => {
     setEditBarberId(appointment.barberId);
     setEditServiceIds(new Set(appointment.services.map((s) => s.id)));
     setEditDate(appointment.startTime);
-    setEditTime(appointment.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    setEditTime(
+      appointment.startTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+    );
     const duration = appointment.totalDuration || appointment.services.reduce((acc, s) => acc + s.duration, 0);
     setEditCustomDuration(String(duration));
     setIsEditDialogOpen(true);
@@ -814,7 +816,7 @@ const deleteAppt = async (id: string) => {
             isWithinInterval(appt.start, { start, end })
         );
         if (!overlaps) {
-          slots.push(start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+          slots.push(start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
         }
       }
       return slots;
