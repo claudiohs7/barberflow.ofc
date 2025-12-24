@@ -1,7 +1,8 @@
 import prisma from "@/server/db/client";
+import { syncReminderQueueForBarbershop } from "@/server/reminders/reminder-queue";
 import { processReminderQueueForBarbershop } from "@/server/reminders/run-reminders";
 
-// Evita múltiplos intervalos em hot-reload ou rotas chamadas várias vezes
+// Evita multiplos intervalos em hot-reload ou rotas chamadas varias vezes
 const globalAny = globalThis as typeof globalThis & { __reminderPoller?: NodeJS.Timer };
 
 async function tick() {
@@ -13,6 +14,7 @@ async function tick() {
 
     for (const shop of shops) {
       try {
+        await syncReminderQueueForBarbershop(shop.id);
         await processReminderQueueForBarbershop(shop.id);
       } catch (shopErr) {
         console.warn(`[reminder-poller] Falha ao processar fila da barbearia ${shop.id}:`, shopErr);
@@ -24,12 +26,12 @@ async function tick() {
 }
 
 if (!globalAny.__reminderPoller) {
-  // roda a cada 5 minutos
+  // roda a cada 60 segundos para ficar mais proximo do horario agendado
   globalAny.__reminderPoller = setInterval(() => {
     void tick();
-  }, 5 * 60 * 1000);
+  }, 60 * 1000);
 
-  // primeira rodada imediata para não esperar 5 minutos
+  // primeira rodada imediata para nao esperar o primeiro intervalo
   void tick();
 }
 

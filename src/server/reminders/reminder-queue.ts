@@ -114,28 +114,20 @@ async function syncReminderQueueForAppointmentWithTemplates(
 
   const startTime = new Date(appointment.startTime);
   if (reminderTemplate && reminderQueueType && !isCompleted) {
-    const scheduledFor = new Date(startTime.getTime() - reminderTemplate.reminderHoursBefore * 60 * 60 * 1000);
     const now = new Date();
+    const scheduledForRaw = new Date(startTime.getTime() - reminderTemplate.reminderHoursBefore * 60 * 60 * 1000);
+    const scheduledFor =
+      scheduledForRaw.getTime() <= now.getTime()
+        ? new Date(now.getTime() + 30 * 1000) // envia o quanto antes quando o agendamento foi criado de ultima hora
+        : scheduledForRaw;
 
-    if (scheduledFor.getTime() <= now.getTime()) {
-      const reminderCancelTypes = new Set([...reminderTypes, reminderQueueType].filter(Boolean));
-      for (const type of reminderCancelTypes) {
-        await cancelReminderQueueEntry({
-          barbershopId,
-          appointmentId: appointment.id,
-          templateType: type,
-          reason: `Lembrete nao enviado: agendamento com menos de ${reminderTemplate.reminderHoursBefore} hora(s) de antecedencia.`,
-        });
-      }
-    } else {
-      await upsertReminderQueueEntry({
-        barbershopId,
-        appointmentId: appointment.id,
-        templateType: reminderQueueType,
-        scheduledFor,
-        status: "pending",
-      });
-    }
+    await upsertReminderQueueEntry({
+      barbershopId,
+      appointmentId: appointment.id,
+      templateType: reminderQueueType,
+      scheduledFor,
+      status: "pending",
+    });
   } else if (reminderTypes.length > 0 || reminderQueueType) {
     const reminderCancelTypes = new Set([...reminderTypes, reminderQueueType].filter(Boolean));
     for (const type of reminderCancelTypes) {

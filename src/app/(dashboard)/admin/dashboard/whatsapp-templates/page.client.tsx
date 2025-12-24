@@ -40,6 +40,17 @@ const templateHints: Record<string, string> = {
 const EmojiPicker = dynamic(async () => import("@emoji-mart/react"), { ssr: false });
 
 const placeholderRegex = new RegExp(`(${placeholders.map((p) => p.replace(/[{}]/g, "\\$&")).join("|")})`, "gi");
+const templateOrder = ["Confirmação de Agendamento", "Lembrete de Agendamento"];
+
+const sortTemplates = (list: TemplateForm[]) =>
+  [...list].sort((a, b) => {
+    const ai = templateOrder.indexOf(a.type || "");
+    const bi = templateOrder.indexOf(b.type || "");
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return (a.name || "").localeCompare(b.name || "");
+  });
 
 export default function WhatsAppTemplatesPage() {
   const { barbershopId, isLoading: isBarbershopIdLoading } = useBarbershopId();
@@ -56,6 +67,7 @@ export default function WhatsAppTemplatesPage() {
   const lastSavedPayloadRef = useRef<string>("");
   const isInitialLoadRef = useRef(true);
   const isSavingRef = useRef(false);
+  const hasLoadedBarbershopRef = useRef<string | null>(null);
 
 
   const resizeTextarea = useCallback((id: string) => {
@@ -66,13 +78,14 @@ export default function WhatsAppTemplatesPage() {
   }, []);
 
   const normalizeTemplates = useCallback((list: TemplateForm[]) => {
-    return list.map((template) => ({
+    const normalized = list.map((template) => ({
       ...template,
       reminderHoursBefore:
         typeof template.reminderHoursBefore === "number" && !Number.isNaN(template.reminderHoursBefore)
           ? template.reminderHoursBefore
           : null,
     }));
+    return sortTemplates(normalized);
   }, []);
 
   const syncTemplates = useCallback(
@@ -142,6 +155,8 @@ export default function WhatsAppTemplatesPage() {
       setIsLoading(false);
       return;
     }
+    if (hasLoadedBarbershopRef.current === barbershopId) return;
+    hasLoadedBarbershopRef.current = barbershopId;
     setIsLoading(true);
     try {
       const response = await fetchJson<{ data: Barbershop }>(`/api/barbershops/${barbershopId}`);
@@ -149,12 +164,9 @@ export default function WhatsAppTemplatesPage() {
       setBarbershop(shop);
       const baseTemplates =
         shop?.messageTemplates && shop.messageTemplates.length > 0 ? shop.messageTemplates : defaultTemplates;
-      const isBasicPlan = (shop?.plan || "").toLowerCase().startsWith("b");
-      const filteredTemplates = isBasicPlan
-        ? baseTemplates.filter((tpl) => tpl.type === "Confirmação Manual")
-        : baseTemplates;
-      syncTemplates(filteredTemplates);
-      lastSavedPayloadRef.current = JSON.stringify(normalizeTemplates(filteredTemplates));
+      const normalizedFiltered = normalizeTemplates(baseTemplates);
+      syncTemplates(normalizedFiltered);
+      lastSavedPayloadRef.current = JSON.stringify(normalizedFiltered);
       isInitialLoadRef.current = true;
     } catch (error: any) {
       toast({
@@ -178,10 +190,9 @@ export default function WhatsAppTemplatesPage() {
   const saveTemplates = useCallback(
     async (payload: TemplateForm[], opts: { silent?: boolean; payloadKey?: string } = {}) => {
       if (!barbershopId) return;
-      const isBasicPlan = (barbershop?.plan || "").toLowerCase().startsWith("b");
-      const effectivePayload = isBasicPlan ? payload.filter((tpl) => tpl.type === "Confirmação Manual") : payload;
+      const normalizedPayload = normalizeTemplates(payload);
 
-      const payloadKey = opts.payloadKey ?? JSON.stringify(effectivePayload);
+      const payloadKey = opts.payloadKey ?? JSON.stringify(normalizedPayload);
       if (opts.silent && payloadKey === lastSavedPayloadRef.current) return;
       if (isSavingRef.current) return;
 
@@ -190,16 +201,18 @@ export default function WhatsAppTemplatesPage() {
         const res = await fetch("/api/message-templates/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barbershopId, messageTemplates: effectivePayload }),
+          body: JSON.stringify({ barbershopId, messageTemplates: normalizedPayload }),
         });
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json.error || json.message || "Nao foi possivel salvar os modelos.");
         }
-        const updated = (json.data as TemplateForm[]) || effectivePayload;
-        lastSavedPayloadRef.current = payloadKey;
-        syncTemplates(updated);
-        setBarbershop((prev) => (prev ? { ...prev, messageTemplates: updated } : prev));
+        const updated = (json.data as TemplateForm[]) || normalizedPayload;
+        const normalizedUpdated = normalizeTemplates(updated);
+        const normalizedUpdatedKey = JSON.stringify(normalizedUpdated);
+        lastSavedPayloadRef.current = normalizedUpdatedKey;
+        syncTemplates(normalizedUpdated);
+        setBarbershop((prev) => (prev ? { ...prev, messageTemplates: normalizedUpdated } : prev));
         if (!opts.silent) {
           toast({
             title: "Templates atualizados",
@@ -216,7 +229,7 @@ export default function WhatsAppTemplatesPage() {
         isSavingRef.current = false;
       }
     },
-    [barbershopId, barbershop, syncTemplates, toast]
+    [barbershopId, barbershop, normalizeTemplates, syncTemplates, toast]
   );
 
   useEffect(() => {
@@ -270,6 +283,7 @@ export default function WhatsAppTemplatesPage() {
   const visibleTemplates = isBasicPlan
     ? templates.filter((tpl) => tpl.type === "Confirmação Manual")
     : templates;
+  const sortedTemplates = sortTemplates(visibleTemplates);
 
   return (
     <div className="space-y-6">
@@ -291,8 +305,9 @@ export default function WhatsAppTemplatesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-            {visibleTemplates.map((template) => {
+            {sortedTemplates.map((template) => {
               const isReminder = template.type === "Lembrete de Agendamento";
+              const isManual = template.type?.toLowerCase().includes("manual");
 
               return (
                 <div key={template.id} className="space-y-4 rounded-lg border p-4">
@@ -319,6 +334,7 @@ export default function WhatsAppTemplatesPage() {
                         id={`reminder-${template.id}`}
                         type="number"
                         min={1}
+                        className="max-w-[100px]"
                         value={template.reminderHoursBefore ?? ""}
                         onChange={(e) =>
                           updateTemplate(template.id, {
@@ -398,7 +414,9 @@ export default function WhatsAppTemplatesPage() {
                   </div>
 
                   <div className="text-xs text-muted-foreground">
-                    Os textos acima sao usados nas notificacoes automaticas do BarberFlow.
+                    {isManual
+                      ? "Os textos acima sao usados nas notificacoes manuais do BarberFlow (confirmacao manual)."
+                      : "Os textos acima sao usados nas notificacoes automaticas do BarberFlow."}
                   </div>
                 </div>
               );

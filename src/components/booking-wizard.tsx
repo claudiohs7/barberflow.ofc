@@ -3143,25 +3143,21 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
           <div className="space-y-2">
-
-
-
             <Label>Barbearia</Label>
-
-
-
-            <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-
-
-
-              {barbershop?.name || "Barbearia selecionada"}
-
-
-
+            <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
+              {barbershop?.logoUrl ? (
+                <img
+                  src={barbershop.logoUrl}
+                  alt={barbershop.name || "Logo da barbearia"}
+                  className="h-8 w-8 rounded-full object-cover bg-muted"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-muted-foreground/20 flex items-center justify-center text-xs font-semibold uppercase">
+                  {(barbershop?.name || "?").slice(0, 2)}
+                </div>
+              )}
+              <span className="truncate">{barbershop?.name || "Barbearia selecionada"}</span>
             </div>
-
-
-
           </div>
 
 

@@ -58,8 +58,8 @@ export const mockSystemMessages = [
 ];
 
 export const messageTemplates: MessageTemplate[] = [
-    { id: 'tmpl1', name: 'Lembrete Padrão', type: 'Lembrete de Agendamento', content: 'Olá, {cliente}!\nPassando para lembrar do seu horário amanhã às {horario} com {barbeiro}.\nAté lá!\nEquipe {barbearia}.', enabled: true, reminderHoursBefore: 24 },
     { id: 'tmpl2', name: 'Confirmação Padrão', type: 'Confirmação de Agendamento', content: 'Olá, {cliente}!\nSeu agendamento para {servico} no dia {data} às {horario} foi confirmado.\nEquipe {barbearia}.', enabled: true },
+    { id: 'tmpl1', name: 'Lembrete Padrão', type: 'Lembrete de Agendamento', content: 'Olá, {cliente}!\nPassando para lembrar do seu horário amanhã às {horario} com {barbeiro}.\nAté lá!\nEquipe {barbearia}.', enabled: true, reminderHoursBefore: 24 },
     { id: 'tmpl4', name: 'Confirmação Manual', type: "Confirmação Manual", content: "Olá, {cliente}!\nPassando para confirmar seu agendamento para {servico} no dia {data} às {horario} com {barbeiro}.\nPor favor, responda 'SIM' para confirmar.\nEquipe {barbearia}.", enabled: true },
     { id: 'tmpl3', name: 'Pesquisa Padrão', type: 'Pesquisa de Satisfação', content: 'Olá, {cliente}!\nAgradecemos a sua visita.\nO que você achou do nosso serviço?\nResponda de 0 a 10.\nEquipe {barbearia}.', enabled: false }
 ];

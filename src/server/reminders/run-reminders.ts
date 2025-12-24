@@ -146,7 +146,8 @@ export async function processReminderQueueForBarbershop(barbershopId: string): P
 
   const templates = getTemplatesForBarbershop(barbershop);
   const now = new Date();
-  const queueEntries = await listDueReminderQueueEntries(barbershopId, now);
+  const dueBefore = new Date(now.getTime() + 60 * 1000); // processa itens que vencem no proximo minuto
+  const queueEntries = await listDueReminderQueueEntries(barbershopId, dueBefore);
 
   if (!queueEntries.length) {
     return {
@@ -284,29 +285,6 @@ export async function processReminderQueueForBarbershop(barbershopId: string): P
     }
 
     const startTime = new Date(appt.startTime);
-    if (isReminder && queueEntry.createdAt) {
-      const createdAt = new Date(queueEntry.createdAt);
-      const scheduledFor = queueEntry.scheduledFor ? new Date(queueEntry.scheduledFor) : null;
-      if (scheduledFor && createdAt.getTime() > scheduledFor.getTime()) {
-        await updateReminderQueueEntryStatus({
-          id: queueEntry.id,
-          status: "cancelled",
-          lastError: "Agendamento criado/alterado apos o horario do lembrete.",
-        });
-        reminderLogs.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          barbershopId,
-          appointmentId: appt.id,
-          clientName: appt.clientName,
-          clientPhone: appt.clientPhone,
-          templateType: queueEntry.templateType,
-          status: "skipped",
-          message: `${actionLabel} ignorado: agendamento criado/alterado com pouca antecedencia.`,
-          sentAt: new Date().toISOString(),
-        });
-        continue;
-      }
-    }
     if (isReminder && startTime <= now) {
       await updateReminderQueueEntryStatus({
         id: queueEntry.id,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { MessageTemplatesProvider } from "@/context/MessageTemplatesContext";
@@ -23,6 +23,7 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
   const [barbershopData, setBarbershopData] = useState<Barbershop | null>(null);
   const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(false);
   const [isHandlingRemoval, setIsHandlingRemoval] = useState(false);
+  const lastLoadRef = useRef<number>(0);
 
   const handleBarbershopRemoval = useCallback(
     async (message?: string) => {
@@ -47,6 +48,11 @@ function RealtimeAuthGuard({ children }: { children: React.ReactNode }) {
   const loadBarbershop = useCallback(
     async (options?: { silent?: boolean }) => {
     if (isAuthLoading || isBarbershopIdLoading) return;
+    const now = Date.now();
+    if (options?.silent && now - lastLoadRef.current < 5000) {
+      return;
+    }
+    lastLoadRef.current = now;
     if (!barbershopId) {
       setBarbershopData(null);
       if (!options?.silent) setIsLoadingBarbershop(false);

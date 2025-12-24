@@ -58,19 +58,16 @@ export async function upsertReminderQueueEntry(input: {
       return;
     }
 
-    if (existing?.status === "cancelled") {
-      return;
-    }
-
     if (existing) {
+      const shouldReactivate = existing.status === "cancelled" && (input.status === "pending" || !input.status);
       await queueModel.update({
         where: { id: existing.id },
         data: {
           scheduledFor: input.scheduledFor,
-          status: input.status ?? existing.status,
-          attempts: existing.attempts,
-          lastError: existing.lastError,
-          sentAt: existing.sentAt,
+          status: input.status ?? (shouldReactivate ? "pending" : existing.status),
+          attempts: shouldReactivate ? 0 : existing.attempts,
+          lastError: shouldReactivate ? null : existing.lastError,
+          sentAt: shouldReactivate ? null : existing.sentAt,
         },
       });
       return;
