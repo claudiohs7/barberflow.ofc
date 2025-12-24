@@ -1,12 +1,10 @@
-﻿
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { capitalizeWords, formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +39,6 @@ import { Progress } from "@/components/ui/progress";
 import { addDays } from 'date-fns';
 import type { AuthUser } from "@/lib/definitions";
 import { fetchJson } from "@/lib/fetcher";
-
 const formSchema = z.object({
   barbershopName: z.string().min(2, "O nome da barbearia é muito curto"),
   legalName: z.string().min(2, "O nome/empresa é obrigatório"),
@@ -53,25 +50,29 @@ const formSchema = z.object({
   city: z.string().min(1, "A cidade é obrigatória"),
   state: z.string().min(1, "O estado é obrigatório"),
   phone: z.string().min(10, "Por favor, insira um número de WhatsApp válido"),
-  cpfCnpj: z.string().min(14, { message: "O CPF/CNPJ é obrigatório e deve ser válido." }),
+  cpfCnpj: z
+    .string()
+    .transform((value) => value.replace(/\D/g, ""))
+    .refine(
+      (value) => value.length === 11 || value.length === 14,
+      { message: "O CPF/CNPJ é obrigatório e deve ser válido." }
+    ),
   email: z.string().email("Por favor, insira um e-mail válido"),
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
 });
-
 type FormData = z.infer<typeof formSchema>;
-
 export default function AdminRegisterPage() {
   const router = useRouter();
   const { signIn } = useAuth();
   const { toast } = useToast();
-
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [formData, setFormData] = useState<FormData | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<"Básico" | "Premium">("Básico");
   const [showPassword, setShowPassword] = useState(false);
-
+  const lastDocumentValidation = useRef<{ value: string; valid: boolean } | null>(null);
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -90,10 +91,8 @@ export default function AdminRegisterPage() {
       password: "",
     },
   });
-
   const cep = form.watch("cep");
   const cpfCnpj = form.watch("cpfCnpj");
-
   useEffect(() => {
     const fetchAddress = async () => {
       const cleanedCep = cep.replace(/\D/g, "");
@@ -120,7 +119,6 @@ export default function AdminRegisterPage() {
         fetchAddress();
     }
   }, [cep, form, toast, step]);
-
     useEffect(() => {
     const fetchCompanyData = async () => {
       const cleanedCnpj = cpfCnpj.replace(/\D/g, "");
@@ -141,7 +139,6 @@ export default function AdminRegisterPage() {
         fetchCompanyData();
     }
   }, [cpfCnpj, form, step]);
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
     value = value.replace(/\D/g, '');
@@ -153,23 +150,98 @@ export default function AdminRegisterPage() {
     e.target.value = value;
     return e;
   };
-  
-    const handleCpfCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let value = e.target.value.replace(/\D/g, '');
-      if (value.length <= 11) {
-          value = value.replace(/(\d{3})(\d)/, '$1.$2');
-          value = value.replace(/(\d{3})(\d)/, '$1.$2');
-          value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-      } else {
-          value = value.substring(0, 14);
-          value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-          value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-          value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-          value = value.replace(/(\d{4})(\d)/, '$1-$2');
-      }
-      e.target.value = value;
-      return e;
+
+  const formatCpfCnpjValue = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 14);
+    if (digits.length <= 11) {
+      return digits
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    }
+    return digits
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
   };
+
+  const validateDocument = async (options?: { silent?: boolean }) => {
+    const digits = cpfCnpj.replace(/\D/g, "");
+    const type = digits.length === 11 ? "cpf" : digits.length === 14 ? "cnpj" : null;
+    if (!type) return true;
+
+    try {
+      const result = await fetchJson<{ valid: boolean; formatted?: string; error?: string }>(
+        `/api/validator?value=${digits}&type=${type}`
+      );
+
+      const isValid = !!result?.valid;
+      lastDocumentValidation.current = { value: digits, valid: isValid };
+
+      if (!isValid) {
+        form.setError("cpfCnpj", { type: "manual", message: `${type.toUpperCase()} inválido` });
+        if (!options?.silent) {
+          toast({
+            variant: "destructive",
+            title: `${type.toUpperCase()} inválido`,
+            description: "Revise o documento e tente novamente.",
+          });
+        }
+        return false;
+      }
+
+      form.clearErrors("cpfCnpj");
+
+      // Se a API retornar formatado, atualiza o campo para manter consistência
+      if (result.formatted) {
+        form.setValue("cpfCnpj", result.formatted);
+      } else {
+        form.setValue("cpfCnpj", formatCpfCnpjValue(digits));
+      }
+
+      // Checa duplicidade na tabela de barbearias
+      const duplicate = await fetchJson<{ exists: boolean }>(
+        `/api/barbershops/check-cpf-cnpj?value=${digits}`
+      );
+      if (duplicate.exists) {
+        form.setError("cpfCnpj", { type: "manual", message: `${type.toUpperCase()} já cadastrado em outra barbearia.` });
+        if (!options?.silent) {
+          toast({
+            variant: "destructive",
+            title: `${type.toUpperCase()} já cadastrado`,
+            description: "Use outro documento ou acesse a conta existente.",
+          });
+        }
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao validar documento:", error);
+      if (!options?.silent) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao validar documento",
+          description: error?.message || "Tente novamente em instantes.",
+        });
+      }
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const digits = cpfCnpj.replace(/\D/g, "");
+    const type = digits.length === 11 ? "cpf" : digits.length === 14 ? "cnpj" : null;
+    if (!type) {
+      form.clearErrors("cpfCnpj");
+      lastDocumentValidation.current = null;
+      return;
+    }
+    if (step !== 1) return;
+    if (lastDocumentValidation.current?.value === digits) return;
+    validateDocument({ silent: true });
+  }, [cpfCnpj, step]);
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -187,16 +259,41 @@ export default function AdminRegisterPage() {
   const nextStep = async () => {
     const fieldsToValidate: (keyof FormData)[] = ['cpfCnpj', 'legalName', 'barbershopName', 'phone'];
     const isValid = await form.trigger(fieldsToValidate);
-    if(isValid) {
-      setStep(2);
-    }
-  }
+    if(!isValid) return;
 
-  function onFormSubmit(values: FormData) {
-     setFormData(values);
-     setIsPlanDialogOpen(true);
-  }
+    const documentOk = await validateDocument();
+    if (!documentOk) return;
 
+    setStep(2);
+  }
+  async function onFormSubmit(values: FormData) {
+     setIsCheckingEmail(true);
+     form.clearErrors("email");
+     try {
+       const check = await fetchJson<{ exists: boolean }>(`/api/auth/check-email?email=${encodeURIComponent(values.email)}`);
+       if (check.exists) {
+          form.setError("email", { type: "manual", message: "Este e-mail já está em uso." });
+          toast({
+            variant: "destructive",
+            title: "E-mail já cadastrado",
+            description: "Use outro e-mail ou faça login com essa conta.",
+          });
+          return;
+       }
+
+       setFormData(values);
+       setIsPlanDialogOpen(true);
+     } catch (error: any) {
+        console.error("Erro ao verificar e-mail:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao verificar e-mail",
+          description: error?.message || "Tente novamente em instantes.",
+        });
+     } finally {
+       setIsCheckingEmail(false);
+     }
+  }
 const handleCreateBarbershop = async () => {
     if (!formData) {
       toast({ variant: "destructive", title: "Erro", description: "Dados do formulário não encontrados ou serviço indisponível." });
@@ -216,10 +313,8 @@ const handleCreateBarbershop = async () => {
             }),
         });
         const creator = registerResponse.data;
-
         const trialStartDate = new Date();
         const trialEndDate = addDays(trialStartDate, 7);
-
         await fetchJson("/api/barbershops", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -245,7 +340,6 @@ const handleCreateBarbershop = async () => {
                 expiryDate: trialEndDate.toISOString()
             }),
         });
-
         await signIn({ email: formData.email, password: formData.password });
         
         toast({
@@ -254,7 +348,6 @@ const handleCreateBarbershop = async () => {
         });
         
         router.push("/admin/dashboard");
-
     } catch (error: any) {
         console.error("Erro no cadastro:", error);
         let description: ReactNode = "Ocorreu um erro ao tentar se cadastrar. Tente novamente.";
@@ -285,7 +378,6 @@ const handleCreateBarbershop = async () => {
         setIsPlanDialogOpen(false);
     }
   };
-
   return (
     <>
     <Card className="w-full max-w-2xl">
@@ -312,7 +404,13 @@ const handleCreateBarbershop = async () => {
                         <FormItem>
                         <FormLabel>CPF ou CNPJ</FormLabel>
                         <FormControl>
-                            <Input placeholder="Seu CPF ou CNPJ" {...field} onChange={(e) => field.onChange(handleCpfCnpjChange(e))} />
+                            <Input 
+                              placeholder="Seu CPF ou CNPJ" 
+                              {...field} 
+                              onChange={(e) => field.onChange(formatCpfCnpjValue(e.target.value))}
+                              inputMode="numeric"
+                              maxLength={18}
+                            />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -491,7 +589,7 @@ const handleCreateBarbershop = async () => {
                         <FormLabel>Senha</FormLabel>
                         <FormControl>
                             <div className="relative">
-                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...field} />
+                            <Input type={showPassword ? 'text' : 'password'} placeholder="********" {...field} />
                             <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(prev => !prev)}>
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
@@ -506,9 +604,9 @@ const handleCreateBarbershop = async () => {
                             <ArrowLeft className="mr-2 h-4 w-4"/>
                             Voltar
                         </Button>
-                        <Button type="submit" className="w-full" disabled={isSubmitting}>
-                           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4"/>}
-                           {isSubmitting ? 'Finalizando...' : 'Finalizar e Escolher Plano'}
+                        <Button type="submit" className="w-full" disabled={isSubmitting || isCheckingEmail}>
+                           {(isSubmitting || isCheckingEmail) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4"/>}
+                           {isCheckingEmail ? 'Validando e-mail...' : (isSubmitting ? 'Finalizando...' : 'Finalizar e Escolher Plano')}
                         </Button>
                     </div>
                 </div>
@@ -528,9 +626,11 @@ const handleCreateBarbershop = async () => {
         </div>
       </CardContent>
     </Card>
-
     <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="sm:max-w-3xl" onInteractOutside={(e) => { if (isSubmitting) e.preventDefault(); }}>
+        <DialogContent
+            className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 z-[60]"
+            onInteractOutside={(e) => { if (isSubmitting) e.preventDefault(); }}
+        >
             <DialogHeader>
                 <DialogTitle className="text-center text-2xl font-headline">Escolha o plano para o seu teste</DialogTitle>
                 <DialogDescription className="text-center">
@@ -579,7 +679,7 @@ const handleCreateBarbershop = async () => {
                 <ShieldCheck className="h-5 w-5 mr-3"/>
                 <p className="text-sm font-medium">Seu teste gratuito de 7 dias será iniciado após a confirmação.</p>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur pt-2">
                 <Button onClick={handleCreateBarbershop} className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4"/>}
                     {isSubmitting ? 'Finalizando...' : `Iniciar Teste no Plano ${selectedPlan}`}
@@ -590,5 +690,4 @@ const handleCreateBarbershop = async () => {
     </>
   );
 }
-
     

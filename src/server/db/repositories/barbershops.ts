@@ -49,6 +49,14 @@ function normalizeCpfCnpj(value?: string) {
   return (value || "").replace(/\D/g, "");
 }
 
+export async function findBarbershopByEmail(email: string) {
+  if (!email) return null;
+  return prisma.barbershop.findFirst({
+    where: { email: email.toLowerCase() },
+    select: { id: true, email: true },
+  });
+}
+
 function normalizeDate(value?: Date | string | null) {
   if (!value) return undefined;
   if (value instanceof Date) return value;
@@ -66,6 +74,13 @@ async function findExistingBarbershopByCpfCnpj(normalizedCpfCnpj: string, exclud
   });
 
   return matches.find((shop) => normalizeCpfCnpj(shop.cpfCnpj ?? "") === normalizedCpfCnpj);
+}
+
+export async function existsBarbershopByCpfCnpj(rawCpfCnpj: string, excludeId?: string) {
+  const normalized = normalizeCpfCnpj(rawCpfCnpj);
+  if (!normalized) return false;
+  const existing = await findExistingBarbershopByCpfCnpj(normalized, excludeId);
+  return !!existing;
 }
 
 function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplates: true } }>): Barbershop {
