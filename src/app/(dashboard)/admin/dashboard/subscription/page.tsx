@@ -125,7 +125,6 @@ export default function SubscriptionPage() {
                     description: "Seu plano foi atualizado para Premium com sucesso.",
                     duration: 10000,
                 });
-                setIsUpgradeModalOpen(false);
             }
         };
         checkUpgrade();
@@ -484,12 +483,12 @@ export default function SubscriptionPage() {
                         <div className="py-4 space-y-4">
                             <Card className="bg-muted/50 border-dashed">
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-center text-lg">Resumo da Cobran?a</CardTitle>
+                                    <CardTitle className="text-center text-lg">Resumo da Cobrança</CardTitle>
                                 </CardHeader>
                                 <CardContent className="text-center space-y-1">
                                     {upgradeCredit > 0 && (
                                         <p className="text-sm text-green-500">
-                                            Cr?dito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano B?sico.
+                                            Crédito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano Básico.
                                         </p>
                                     )}
                                     <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
@@ -534,7 +533,7 @@ export default function SubscriptionPage() {
                                         )}
 
                                         <div className="space-y-2">
-                                            <p className="text-sm font-medium">Codigo copia e cola</p>
+                                            <p className="text-sm font-medium">Código copia e cola</p>
                                             <div className="flex gap-2">
                                                 <Input readOnly value={pixCharge.qrCode || ""} />
                                                 <Button
@@ -543,7 +542,7 @@ export default function SubscriptionPage() {
                                                     className="shrink-0"
                                                     onClick={() => {
                                                         navigator.clipboard?.writeText(pixCharge.qrCode);
-                                                        toast({ title: "Copiado", description: "Codigo PIX copiado." });
+                                                         toast({ title: "Copiado", description: "Código PIX copiado." });
                                                     }}
                                                 >
                                                     <Copy className="mr-1 h-4 w-4" />
@@ -551,7 +550,7 @@ export default function SubscriptionPage() {
                                                 </Button>
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                                Pague em qualquer app bancario ou carteira digital.
+                                                Pague em qualquer app bancário ou carteira digital.
                                             </p>
                                         </div>
 
