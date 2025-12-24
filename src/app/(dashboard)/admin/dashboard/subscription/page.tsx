@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Crown, Sparkles, CreditCard, HelpCircle, CheckCircle, Zap, QrCode, Copy, Loader2 } from "lucide-react";
+import { Crown, Sparkles, CreditCard, HelpCircle, CheckCircle, Zap, QrCode, Copy, Loader2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchJson } from "@/lib/fetcher";
 import type { Barbershop, PlanName } from "@/lib/definitions";
@@ -249,7 +249,8 @@ export default function SubscriptionPage() {
             // Nova regra: cobrar valor cheio do Premium menos crédito dos dias restantes do Básico
             const finalCost = planPrices.Premium - creditRemaining;
             setUpgradeCredit(creditRemaining > 0 ? creditRemaining : 0);
-            setUpgradeCost(finalCost > 0 ? finalCost : 0);
+            const minimumCharge = 0.5;
+            setUpgradeCost(finalCost > minimumCharge ? finalCost : minimumCharge);
         }
 
         setIsUpgradeModalOpen(true);
@@ -274,7 +275,10 @@ export default function SubscriptionPage() {
                     amount: typeof data.amount === "number" ? data.amount : prev?.amount,
                 }));
 
-                if (typeof data.amount === "number") setUpgradeCost(data.amount);
+                const minCharge = 0.5;
+                if (typeof data.amount === "number") {
+                    setUpgradeCost(data.amount > minCharge ? data.amount : minCharge);
+                }
                 if (normalizedStatus === "paid") {
                     setPixStatus("paid");
                     clearPixPolling();
@@ -336,6 +340,14 @@ export default function SubscriptionPage() {
 
     const generatePixCharge = async () => {
         if (!barbershopId) return;
+        if (creditExceedsPremium) {
+            toast({
+                variant: "destructive",
+                title: "Crédito excede o valor do plano",
+                description: "Entre em contato com o suporte para ativar o Premium sem cobrança adicional.",
+            });
+            return;
+        }
         setPixCharge(null);
         setPixStatus("created");
         setIsGeneratingPix(true);
@@ -355,6 +367,8 @@ export default function SubscriptionPage() {
                 amount: typeof data.amount === "number" ? data.amount : undefined,
             });
             if (typeof data.amount === "number") setUpgradeCost(data.amount);
+            const minCharge = 0.5;
+            if (typeof data.amount === "number") setUpgradeCost(data.amount > minCharge ? data.amount : minCharge);
             setPixStatus(normalizedStatus as any);
             startPixPolling(data.transactionId);
             scheduleRegen();
@@ -376,6 +390,7 @@ export default function SubscriptionPage() {
 
     const currentPlan = normalizePlan(barbershopData?.plan);
     const planPrice = planPrices[currentPlan] ?? 0;
+    const creditExceedsPremium = upgradeCredit >= planPrices.Premium;
     const expiryDetails = getExpiryDetails();
 
     return (
@@ -452,24 +467,25 @@ export default function SubscriptionPage() {
                 <DialogHeader>
                     <DialogTitle className="flex items-center justify-center gap-2 text-center">
                         <Crown className="h-6 w-6 text-primary" />
-                        Upgrade para o Plano Premium realizado com sucesso!
+                        Plano Premium ativado com sucesso!
                     </DialogTitle>
                 </DialogHeader>
                 {pixStatus === "paid" ? (
                     <div className="py-6 space-y-6">
-                        <Card className="bg-emerald-500/10 border-emerald-500/30 text-center">
-                            <CardHeader className="space-y-2 items-center">
-                                <CardTitle className="flex items-center justify-center gap-2 text-emerald-400 text-xl text-center">
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-emerald-500/15 border border-emerald-400/40 shadow-xl text-center">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(52,211,153,0.18),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(52,211,153,0.12),transparent_40%)]" />
+                            <CardHeader className="space-y-3 items-center relative z-10">
+                                <CardTitle className="flex items-center justify-center gap-2 text-emerald-300 text-xl text-center drop-shadow">
                                     <CheckCircle className="h-5 w-5" />
-                                    🎉 Pagamento confirmado
+                                    Pagamento confirmado 🎉
                                 </CardTitle>
-                                <CardDescription className="text-sm text-emerald-100/80 text-center">
+                                <CardDescription className="text-sm text-emerald-50/90 text-center">
                                     O plano Premium está ativo e todas as funcionalidades de WhatsApp foram liberadas.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="text-sm text-emerald-50/90 space-y-1 text-center">
-                                <p>Use automações, lembretes e integrações de WhatsApp sem restrições.</p>
-                                <p className="text-emerald-100">A próxima cobrança seguirá normalmente no ciclo do Premium.</p>
+                            <CardContent className="text-sm text-emerald-50/90 space-y-2 text-center relative z-10">
+                                <p className="m-0">Use automações, lembretes e integrações de WhatsApp sem restrições.</p>
+                                <p className="text-emerald-100 m-0">A próxima cobrança seguirá normalmente no ciclo do Premium.</p>
                             </CardContent>
                         </Card>
                         <DialogFooter className="flex justify-center">
@@ -491,97 +507,120 @@ export default function SubscriptionPage() {
                                             Crédito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano Básico.
                                         </p>
                                     )}
-                                    <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Valor proporcional para upgrade imediato. A próxima cobrança será o valor cheio do plano.
-                                    </p>
+                                    {!creditExceedsPremium && (
+                                        <>
+                                            <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Valor proporcional para upgrade imediato. A próxima cobrança será o valor cheio do plano.
+                                            </p>
+                                        </>
+                                    )}
                                 </CardContent>
                             </Card>
                             
-                            <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="font-semibold flex items-center gap-2">
-                                        <QrCode className="h-4 w-4" />
-                                        Pagamento via PIX
-                                    </p>
-                                    <Badge variant={pixStatus === "paid" ? "default" : "secondary"}>
-                                        {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando"}
-                                    </Badge>
-                                </div>
-
-                                {!pixCharge && (
-                                    <Button className="w-full" variant="outline" onClick={generatePixCharge} disabled={isGeneratingPix}>
-                                        {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                                        Gerar cobran?a PIX
-                                    </Button>
-                                )}
-
-                                {pixCharge && (
-                                    <div className="space-y-3">
-                                        {pixCharge.qrCodeBase64 ? (
-                                            <div className="flex justify-center">
-                                                <img
-                                                    src={pixCharge.qrCodeBase64}
-                                                    alt="QR Code PIX"
-                                                    className="max-h-48 rounded-md border bg-white p-2"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground text-center">
-                                                Use o codigo copia e cola abaixo no seu app do banco.
-                                            </p>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            <p className="text-sm font-medium">Código copia e cola</p>
-                                            <div className="flex gap-2">
-                                                <Input readOnly value={pixCharge.qrCode || ""} />
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="shrink-0"
-                                                    onClick={() => {
-                                                        navigator.clipboard?.writeText(pixCharge.qrCode);
-                                                         toast({ title: "Copiado", description: "Código PIX copiado." });
-                                                    }}
-                                                >
-                                                    <Copy className="mr-1 h-4 w-4" />
-                                                    Copiar
-                                                </Button>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Pague em qualquer app bancário ou carteira digital.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                            <span>Status: {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando pagamento..."}</span>
-                                            <span>Valor: {formatCurrency(upgradeCost)}</span>
-                                        </div>
-
-                                        <div className="flex gap-2">
-                                            <Button variant="outline" className="w-full" onClick={generatePixCharge} disabled={isGeneratingPix}>
-                                                {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                                                Gerar novo PIX
+                            {creditExceedsPremium ? (
+                                <Card className="bg-primary/10 border border-primary/30 text-center">
+                                    <CardContent className="space-y-3 py-4 text-primary text-center">
+                                        <p>O crédito excede o valor do plano Premium.</p>
+                                        <p>Entre em contato com o suporte para ativação manual.</p>
+                                        <div className="flex justify-center">
+                                            <Button
+                                                variant="default"
+                                                className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1dad57] text-white shadow-[0_10px_30px_rgba(37,211,102,0.35)] hover:shadow-[0_12px_34px_rgba(37,211,102,0.45)] transition-all duration-200 border border-white/10"
+                                                onClick={() => {
+                                                    const msg = encodeURIComponent(
+                                                        "Olá, tenho crédito excedente do plano Básico e quero ativar o Premium. Pode ajudar?"
+                                                    );
+                                                    const phone = "5531994371680"; // coloque aqui o número completo (DDI+DDD+telefone) se disponível
+                                                    const url = phone !== "55"
+                                                        ? `https://wa.me/${phone}?text=${msg}`
+                                                        : `https://wa.me/?text=${msg}`;
+                                                    window.open(url, "_blank");
+                                                }}
+                                            >
+                                                <MessageCircle className="h-4 w-4" />
+                                                Falar no WhatsApp
                                             </Button>
                                         </div>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="font-semibold flex items-center gap-2">
+                                            <QrCode className="h-4 w-4" />
+                                            Pagamento via PIX
+                                        </p>
+                                        <Badge variant={pixStatus === "paid" ? "default" : "secondary"}>
+                                            {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando"}
+                                        </Badge>
                                     </div>
-                                )}
-                            </div>
+
+                                    {!pixCharge && (
+                                        <Button className="w-full" variant="outline" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                            {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                            Gerar PIX
+                                        </Button>
+                                    )}
+
+                                    {pixCharge && (
+                                        <div className="space-y-3">
+                                            {pixCharge.qrCodeBase64 ? (
+                                                <div className="flex justify-center">
+                                                    <img
+                                                        src={pixCharge.qrCodeBase64}
+                                                        alt="QR Code PIX"
+                                                        className="max-h-48 rounded-md border bg-white p-2"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground text-center">
+                                                    Use o codigo copia e cola abaixo no seu app do banco.
+                                                </p>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                <p className="text-sm font-medium">Código copia e cola</p>
+                                                <div className="flex gap-2">
+                                                    <Input readOnly value={pixCharge.qrCode || ""} />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="shrink-0"
+                                                        onClick={() => {
+                                                            navigator.clipboard?.writeText(pixCharge.qrCode);
+                                                            toast({ title: "Copiado", description: "Código PIX copiado." });
+                                                        }}
+                                                    >
+                                                        <Copy className="mr-1 h-4 w-4" />
+                                                        Copiar
+                                                    </Button>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Pague em qualquer app bancário ou carteira digital.
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <span>Status: {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando pagamento..."}</span>
+                                                <span>Valor: {formatCurrency(upgradeCost)}</span>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" className="w-full" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                                    {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                                    Gerar novo PIX
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <DialogFooter>
-                            <div className="flex w-full justify-between gap-2">
-                                <Button
-                                    variant="default"
-                                    onClick={handleManualCheckPayment}
-                                    disabled={!pixCharge?.transactionId || pixStatus === "paid" || pixStatus === "canceled"}
-                                >
-                                    Verificar pagamento
-                                </Button>
-                                <DialogClose asChild>
-                                    <Button variant="outline">Fechar</Button>
-                                </DialogClose>
-                            </div>
+                            <DialogClose asChild>
+                                <Button variant="outline">Fechar</Button>
+                            </DialogClose>
                         </DialogFooter>
                     </>
                 )}

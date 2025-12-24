@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (status === "paid") {
       const shop = await getBarbershopBySlugOrId(barbershopId);
       if (shop) {
-        const newExpiry = nextPremiumExpiry(shop.expiryDate ? new Date(shop.expiryDate) : undefined);
+        const newExpiry = nextPremiumExpiry();
         await updateBarbershop(barbershopId, {
           plan: "Premium",
           status: "Ativa",

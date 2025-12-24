@@ -3,7 +3,7 @@ import { verifyAccessToken } from "@/lib/jwt";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
 import { createPixCharge, getTransactionStatus } from "@/server/pushinpay/client";
-import { calculateUpgradeCost, nextPremiumExpiry, resolveWebhookUrl } from "@/server/pushinpay/upgrade";
+import { calculateUpgradeCost, nextPremiumExpiry, resolveWebhookUrl, PREMIUM_PRICE } from "@/server/pushinpay/upgrade";
 
 type RequestBody = {
   barbershopId?: string;
@@ -45,7 +45,12 @@ export async function POST(req: NextRequest) {
       return badRequest("Plano ja e Premium.");
     }
 
-    const { amount } = calculateUpgradeCost(shop);
+    const { amount, credit } = calculateUpgradeCost(shop);
+
+    // Se o crédito do Básico supera o valor cheio do Premium, orienta a falar com o suporte
+    if (credit >= PREMIUM_PRICE) {
+      return badRequest("Crédito excede o valor do plano. Fale com o suporte para ativação manual.");
+    }
     const valueInCents = Math.max(50, Math.round(amount * 100));
 
     const webhookUrl = resolveWebhookUrl(barbershopId);
@@ -93,7 +98,7 @@ export async function GET(req: NextRequest) {
     const status = (data.status || "").toLowerCase();
 
     if (status === "paid") {
-      const newExpiry = nextPremiumExpiry(shop.expiryDate ? new Date(shop.expiryDate) : undefined);
+      const newExpiry = nextPremiumExpiry();
       await updateBarbershop(barbershopId, {
         plan: "Premium",
         status: "Ativa",

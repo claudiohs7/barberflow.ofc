@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, FilterX, KeyRound, RefreshCw } from 'lucide-react';
+import { MapPin, Mail, Smartphone, Calendar, Edit, Search, ExternalLink, Trash2, AlertCircleIcon, FilterX, KeyRound, RefreshCw, Copy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -612,22 +612,41 @@ export default function BarbershopsPage() {
                 </CardHeader>
                                 <CardContent className="space-y-4">
                     {displayedBarbershops.map(shop => (
-                        <div key={shop.id} className="border border-primary/50 rounded-lg p-4 space-y-4">
-                            <div className="flex items-start justify-between gap-4">
+                        <div
+                            key={shop.id}
+                            className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-slate-900/70 via-slate-900/55 to-slate-900/80 p-5 space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur"
+                        >
+                            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.12),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(59,130,246,0.12),transparent_35%),linear-gradient(135deg,rgba(16,185,129,0.08),transparent)]" />
+                            <div className="flex items-start justify-between gap-4 relative z-10">
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-lg">{shop.name}</h3>
-                                        <Badge variant="outline" className="text-xs">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h3 className="font-bold text-lg text-foreground">{shop.name}</h3>
+                                        <Badge
+                                            variant="outline"
+                                            className="text-xs border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                                        >
                                             {shop.plan && shop.plan.toLowerCase().startsWith("b") ? "Basico" : shop.plan}
                                         </Badge>
-                                        <Badge variant={shop.status === "Ativa" ? "default" : "destructive"} className={shop.status === "Ativa" ? "bg-green-500/20 text-green-500 border-green-500/30" : ""}>
+                                        <Badge
+                                            variant={shop.status === "Ativa" ? "default" : "destructive"}
+                                            className={
+                                                shop.status === "Ativa"
+                                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
+                                                    : "bg-red-500/15 text-red-300 border-red-500/40"
+                                            }
+                                        >
                                             {shop.status}
                                         </Badge>
                                     </div>
                                     <p className="text-sm text-muted-foreground">{shop.legalName} - {shop.cpfCnpj}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {shop.phone}{" "}
-                                        <Button variant="link" size="sm" asChild className="p-0 h-auto text-green-500 hover:text-green-500/90">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        {shop.phone}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                            className="h-7 px-2 text-emerald-300 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
+                                        >
                                             <Link href={getWhatsAppLink(shop.phone)} target="_blank" rel="noopener noreferrer">
                                                 WhatsApp
                                             </Link>
@@ -635,12 +654,15 @@ export default function BarbershopsPage() {
                                     </p>
                                 </div>
                                 <div className="text-right space-y-1">
-                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Owner ID</p>
-                                    <p className="font-mono text-sm text-muted-foreground">{shop.ownerId}</p>
-                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Instancia</p>
-                                    <Badge variant="outline" className="font-mono text-xs">
-                                        {shop.bitsafiraInstanceId ?? "Nao conectada"}
-                                    </Badge>
+                                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Barbershop ID</p>
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Badge variant="outline" className="font-mono text-xs border-emerald-500/40 text-emerald-300 bg-emerald-500/10">
+                                            {shop.id}
+                                        </Badge>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigator.clipboard?.writeText(shop.id)}>
+                                            <Copy className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -650,21 +672,46 @@ export default function BarbershopsPage() {
                                         <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
                                         <div className="flex-1">
                                             <p className="text-sm font-medium">Endereco</p>
-                                            <p className="text-sm text-muted-foreground">{shop.fullAddressString}</p>
-                                            <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                                                <Link href={getGoogleMapsLink(shop.address)} target="_blank" rel="noopener noreferrer">
-                                                    Ver no mapa
-                                                </Link>
-                                            </Button>
-                                        </div>
+                                    <p className="text-sm text-muted-foreground">{shop.fullAddressString}</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                        className="h-7 px-2 text-sky-300 border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20"
+                                    >
+                                        <Link href={getGoogleMapsLink(shop.address)} target="_blank" rel="noopener noreferrer">
+                                            Ver no mapa
+                                        </Link>
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() => navigator.clipboard?.writeText(shop.fullAddressString || "")}
+                                        >
+                                            <Copy className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
                                     </div>
-                                    <div className="flex items-start gap-3">
-                                        <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
-                                        <div>
-                                            <p className="text-sm font-medium">E-mail do proprietario</p>
-                                            <p className="text-sm text-muted-foreground">{shop.email}</p>
-                                        </div>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">E-mail do proprietario</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm text-muted-foreground">{shop.email}</p>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() => navigator.clipboard?.writeText(shop.email || "")}
+                                        >
+                                            <Copy className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
                                     </div>
+                                </div>
+                            </div>
                                 </div>
 
                                 <div className="space-y-3">
@@ -705,9 +752,21 @@ export default function BarbershopsPage() {
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 {shop.plan.toLowerCase().startsWith("prem") ? (
-                                                    <Badge variant="outline" className="font-mono text-xs">
-                                                        {shop.bitsafiraInstanceId ?? "Nao conectada"}
-                                                    </Badge>
+                                                    <>
+                                                        <Badge variant="outline" className="font-mono text-xs">
+                                                            {shop.bitsafiraInstanceId ?? "Nao conectada"}
+                                                        </Badge>
+                                                        {shop.bitsafiraInstanceId && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7"
+                                                                onClick={() => navigator.clipboard?.writeText(shop.bitsafiraInstanceId || "")}
+                                                            >
+                                                                <Copy className="h-4 w-4 text-muted-foreground" />
+                                                            </Button>
+                                                        )}
+                                                    </>
                                                 ) : (
                                                     <Badge variant="outline" className="font-mono text-xs text-yellow-500 border-yellow-500/50">
                                                         Plano Básico
@@ -860,19 +919,22 @@ export default function BarbershopsPage() {
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
-                                            variant={"outline"}
-                                            className="w-full justify-start text-left font-normal"
+                                            variant="outline"
+                                            className="w-full justify-start text-left font-normal bg-gradient-to-r from-slate-800/70 via-slate-900/70 to-slate-800/70 border-slate-700 hover:border-emerald-400/60 hover:shadow-[0_0_0_3px_rgba(16,185,129,0.25)] transition-all duration-200"
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
                                             {formState.expiryDate ? formState.expiryDate : <span>Selecione uma data</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
+                                    <PopoverContent className="w-auto p-0 border border-emerald-500/30 bg-slate-900/95 backdrop-blur-md shadow-2xl rounded-xl">
                                         <CalendarComponent
                                             mode="single"
+                                            showOutsideDays
+                                            numberOfMonths={2}
                                             selected={formState.expiryDate ? parse(formState.expiryDate, 'dd/MM/yyyy', new Date()) : undefined}
                                             onSelect={handleDateChange}
                                             initialFocus
+                                            className="rounded-xl border border-emerald-500/20 bg-slate-900/80"
                                         />
                                     </PopoverContent>
                                 </Popover>
