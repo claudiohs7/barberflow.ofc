@@ -184,21 +184,24 @@ import { Combobox } from "@/components/ui/combobox";
 
 import { addDays, addMinutes, getDay, parse, startOfDay, endOfDay, isSameDay, isWithinInterval as isWithinIntervalFns } from "date-fns";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+import { Input } from "@/components/ui/input";
 
 import { Label } from "./ui/label";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1188,17 +1191,12 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
   const { toast } = useToast();
 
-
-
-
-
-
-
-
-
-
-
   const { user } = useAuth();
+
+  const guestPhoneDigits = useMemo(() => guestPhone.replace(/\\D/g, ""), [guestPhone]);
+
+  const isGuestInfoMissing = !user && (!guestName.trim() || guestPhoneDigits.length < 10);
+
 
 
 
@@ -2858,101 +2856,43 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
   const confirmBooking = async () => {
 
-
-
     if (!confirmedAppointment) return;
 
-
-
-
-
-
+    if (!user) {
+      if (!guestName.trim()) {
+        toast({ variant: "destructive", title: "Informe seu nome", description: "Precisamos do nome para confirmar o agendamento." });
+        return;
+      }
+      if (guestPhoneDigits.length < 10) {
+        toast({ variant: "destructive", title: "Informe o WhatsApp", description: "Digite um numero valido com DDD para confirmarmos o agendamento." });
+        return;
+      }
+    }
 
     setIsConfirming(true);
 
-
-
-
-
-
-
     const clientName = user?.name || guestName || "Cliente";
-
-
-
-    const clientPhone = user?.phone || guestPhone || "";
-
-
-
+    const clientPhone = user?.phone || guestPhoneDigits || "";
     const clientId = user?.id ?? null;
 
-
-
-
-
-
-
     try {
-
-
-
       await createAppointment(confirmedAppointment.startTime, confirmedAppointment.endTime, {
-
-
-
         clientName,
-
-
-
         clientPhone,
-
-
-
         clientId,
-
-
-
       });
 
-
-
       toast({ title: "Agendamento confirmado!", description: "Seu agendamento foi criado com sucesso." });
-
-
-
       setIsConfirmationDialogOpen(false);
-
-
-
       setConfirmedAppointment(null);
-
-
-
     } catch (error) {
-
-
-
       console.error(error);
-
-
-
-      toast({ variant: "destructive", title: "Erro", description: (error as Error).message || "Não foi possível criar o agendamento." });
-
-
-
+      toast({ variant: "destructive", title: "Erro", description: (error as Error).message || "Nao foi possivel criar o agendamento." });
     } finally {
-
-
-
       setIsConfirming(false);
-
-
-
     }
-
-
-
   };
+
 
 
 
@@ -3844,6 +3784,31 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
+          {!user && (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="guest-name">Nome completo</Label>
+                <Input
+                  id="guest-name"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Seu nome"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="guest-phone">WhatsApp</Label>
+                <Input
+                  id="guest-phone"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  placeholder="(11) 99999-9999"
+                  inputMode="tel"
+                />
+                <p className="text-xs text-muted-foreground">Usaremos para confirmar e enviar lembretes.</p>
+              </div>
+            </div>
+          )}
+
           {confirmedAppointment && (
 
 
@@ -3963,7 +3928,7 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
-            <Button onClick={confirmBooking} disabled={isConfirming}>
+            <Button onClick={confirmBooking} disabled={isConfirming || isGuestInfoMissing}>
 
 
 
@@ -4012,5 +3977,4 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 }
-
 

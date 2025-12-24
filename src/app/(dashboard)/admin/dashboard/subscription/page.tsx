@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Crown, Sparkles, CreditCard, HelpCircle, CheckCircle, Zap } from "lucide-react";
+import { Crown, Sparkles, CreditCard, HelpCircle, CheckCircle, Zap, QrCode, Copy, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchJson } from "@/lib/fetcher";
 import type { Barbershop, PlanName } from "@/lib/definitions";
@@ -31,6 +31,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
 
 
 const BASIC_PLAN: PlanName = "Básico";
@@ -55,6 +56,17 @@ export default function SubscriptionPage() {
     const isSuperAdmin = user?.email === 'claudiohs@hotmail.com';
     const [barbershopData, setBarbershopData] = useState<Barbershop | null>(null);
     const [isLoadingBarbershop, setIsLoadingBarbershop] = useState(true);
+    const [pixCharge, setPixCharge] = useState<{
+        transactionId: string;
+        qrCode: string;
+        qrCodeBase64?: string | null;
+        status?: string;
+        amount?: number;
+    } | null>(null);
+    const [pixStatus, setPixStatus] = useState<"idle" | "created" | "paid" | "canceled" | "error">("idle");
+    const [isGeneratingPix, setIsGeneratingPix] = useState(false);
+    const pollRef = useRef<NodeJS.Timeout | null>(null);
+    const regenRef = useRef<NodeJS.Timeout | null>(null);
 
     const fetchBarbershop = useCallback(
         async ({ showLoading = true, suppressToast = false } = {}) => {
@@ -108,7 +120,7 @@ export default function SubscriptionPage() {
             if (!isActive || !updated) return;
             if (updated.plan === "Premium") {
                 toast({
-                    title: "Upgrade concluído!",
+                    title: "Upgrade concluido!",
                     description: "Seu plano foi atualizado para Premium com sucesso.",
                 });
                 setIsUpgradeModalOpen(false);
@@ -121,6 +133,36 @@ export default function SubscriptionPage() {
             clearInterval(intervalId);
         };
     }, [isUpgradeModalOpen, barbershopId, fetchBarbershop, toast]);
+
+    const clearPixPolling = () => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+    };
+
+    const clearRegenTimeout = () => {
+        if (regenRef.current) {
+            clearTimeout(regenRef.current);
+            regenRef.current = null;
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            clearPixPolling();
+            clearRegenTimeout();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isUpgradeModalOpen) {
+            clearPixPolling();
+            clearRegenTimeout();
+            setPixCharge(null);
+            setPixStatus("idle");
+        }
+    }, [isUpgradeModalOpen]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -211,12 +253,102 @@ export default function SubscriptionPage() {
         setIsUpgradeModalOpen(true);
     };
 
-    const notifyPaymentDisabled = () => {
-        const amount = formatCurrency(upgradeCost);
-        const message = `Olá, quero fazer o upgrade e pagar via PIX no valor de ${amount}.`;
-        const encoded = encodeURIComponent(message);
-        const whatsappNumber = "5531994371680";
-        window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank", "noopener,noreferrer");
+    const pollPaymentStatus = useCallback(
+        async (transactionId: string) => {
+            if (!transactionId || !barbershopId) return;
+            try {
+                const res = await fetchJson<{ data: any }>(
+                    `/api/payments/pix/upgrade?transactionId=${encodeURIComponent(transactionId)}&barbershopId=${encodeURIComponent(barbershopId)}`,
+                    { method: "GET" }
+                );
+                const data = res.data || {};
+                const normalizedStatus = (data.status || "").toLowerCase();
+
+                setPixCharge((prev) => ({
+                    transactionId,
+                    qrCode: data.qrCode || prev?.qrCode || "",
+                    qrCodeBase64: data.qrCodeBase64 ?? prev?.qrCodeBase64,
+                    status: data.status || prev?.status,
+                    amount: typeof data.amount === "number" ? data.amount : prev?.amount,
+                }));
+
+                if (typeof data.amount === "number") setUpgradeCost(data.amount);
+                if (normalizedStatus === "paid") {
+                    setPixStatus("paid");
+                    clearPixPolling();
+                    clearRegenTimeout();
+                    toast({ title: "Pagamento confirmado!", description: "Plano Premium ativado." });
+                    await fetchBarbershop({ showLoading: false, suppressToast: true });
+                    setIsUpgradeModalOpen(false);
+                } else if (normalizedStatus === "canceled") {
+                    setPixStatus("canceled");
+                    clearPixPolling();
+                    clearRegenTimeout();
+                    toast({
+                        variant: "destructive",
+                        title: "Pagamento cancelado",
+                        description: "Gere um novo PIX para tentar novamente.",
+                    });
+                } else if (normalizedStatus) {
+                    setPixStatus(normalizedStatus as any);
+                }
+            } catch (error: any) {
+                console.error("Erro ao consultar pagamento PIX:", error);
+            }
+        },
+        [barbershopId, fetchBarbershop, toast]
+    );
+
+    const startPixPolling = (transactionId: string) => {
+        if (!transactionId) return;
+        clearPixPolling();
+        void pollPaymentStatus(transactionId);
+        pollRef.current = setInterval(() => {
+            void pollPaymentStatus(transactionId);
+        }, 20000);
+    };
+
+    const scheduleRegen = () => {
+        clearRegenTimeout();
+        regenRef.current = setTimeout(() => {
+            void generatePixCharge();
+        }, 60000);
+    };
+
+    const generatePixCharge = async () => {
+        if (!barbershopId) return;
+        setPixCharge(null);
+        setPixStatus("created");
+        setIsGeneratingPix(true);
+        try {
+            const res = await fetchJson<{ data: any }>("/api/payments/pix/upgrade", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ barbershopId }),
+            });
+            const data = res.data;
+            const normalizedStatus = (data?.status || "created").toLowerCase();
+            setPixCharge({
+                transactionId: data.transactionId,
+                qrCode: data.qrCode || "",
+                qrCodeBase64: data.qrCodeBase64,
+                status: data.status,
+                amount: typeof data.amount === "number" ? data.amount : undefined,
+            });
+            if (typeof data.amount === "number") setUpgradeCost(data.amount);
+            setPixStatus(normalizedStatus as any);
+            startPixPolling(data.transactionId);
+            scheduleRegen();
+        } catch (error: any) {
+            console.error("Erro ao gerar PIX:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao gerar PIX",
+                description: error?.message || "Nao foi possivel criar a cobranca PIX.",
+            });
+        } finally {
+            setIsGeneratingPix(false);
+        }
     };
 
     if (isBarbershopIdLoading || isLoadingBarbershop) {
@@ -324,11 +456,75 @@ export default function SubscriptionPage() {
                         </CardContent>
                     </Card>
                     
-                    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4 text-center">
-                        <p className="font-semibold">Pagamento via PIX desativado</p>
-                        <Button className="w-full" variant="outline" onClick={notifyPaymentDisabled}>
-                            Falar com o suporte
-                        </Button>
+                    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold flex items-center gap-2">
+                                <QrCode className="h-4 w-4" />
+                                Pagamento via PIX
+                            </p>
+                            <Badge variant={pixStatus === "paid" ? "default" : "secondary"}>
+                                {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando"}
+                            </Badge>
+                        </div>
+
+                        {!pixCharge && (
+                            <Button className="w-full" variant="outline" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                Gerar cobrança PIX
+                            </Button>
+                        )}
+
+                        {pixCharge && (
+                            <div className="space-y-3">
+                                {pixCharge.qrCodeBase64 ? (
+                                    <div className="flex justify-center">
+                                        <img
+                                            src={pixCharge.qrCodeBase64}
+                                            alt="QR Code PIX"
+                                            className="max-h-48 rounded-md border bg-white p-2"
+                                        />
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center">
+                                        Use o codigo copia e cola abaixo no seu app do banco.
+                                    </p>
+                                )}
+
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium">Codigo copia e cola</p>
+                                    <div className="flex gap-2">
+                                        <Input readOnly value={pixCharge.qrCode || ""} />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="shrink-0"
+                                            onClick={() => {
+                                                navigator.clipboard?.writeText(pixCharge.qrCode);
+                                                toast({ title: "Copiado", description: "Codigo PIX copiado." });
+                                            }}
+                                        >
+                                            <Copy className="mr-1 h-4 w-4" />
+                                            Copiar
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Pague em qualquer app bancario ou carteira digital.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Status: {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando pagamento..."}</span>
+                                    <span>Valor: {formatCurrency(upgradeCost)}</span>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button variant="outline" className="w-full" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                        {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                        Gerar novo PIX
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <DialogFooter>
@@ -341,4 +537,3 @@ export default function SubscriptionPage() {
     </div>
     );
 }
-
