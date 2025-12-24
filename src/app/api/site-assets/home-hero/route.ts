@@ -13,10 +13,19 @@ function pickVariant(req: NextRequest): "desktop" | "mobile" {
   return v === "mobile" ? "mobile" : "desktop";
 }
 
-async function readFallbackSvg() {
-  const abs = path.join(process.cwd(), "public", "hero.svg");
-  const data = await fs.readFile(abs);
-  return { data, contentType: "image/svg+xml" };
+async function readFallbackHero() {
+  const candidates = ["hero.png", "hero.jpg", "hero.jpeg", "hero.webp", "hero.svg"];
+  for (const file of candidates) {
+    const abs = path.join(process.cwd(), "public", file);
+    try {
+      const data = await fs.readFile(abs);
+      const ext = path.extname(abs).replace(".", "").toLowerCase();
+      return { data, contentType: getMimeFromExt(ext || "svg") };
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error("Fallback hero image not found");
 }
 
 async function readFileFromRelative(relativePath: string) {
@@ -37,7 +46,7 @@ export async function GET(req: NextRequest) {
     if (relativePath) {
       result = await readFileFromRelative(relativePath);
     } else {
-      result = await readFallbackSvg();
+      result = await readFallbackHero();
     }
 
     return new NextResponse(result.data, {
@@ -49,7 +58,11 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     // If something went wrong, fallback to bundled SVG
-    const fallback = await readFallbackSvg();
+    const fallback = await readFallbackHero().catch(async () => {
+      const abs = path.join(process.cwd(), "public", "hero.svg");
+      const data = await fs.readFile(abs);
+      return { data, contentType: "image/svg+xml" };
+    });
     return new NextResponse(fallback.data, {
       status: 200,
       headers: {
