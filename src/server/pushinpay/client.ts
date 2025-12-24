@@ -77,19 +77,29 @@ export async function getTransactionStatus(id: string): Promise<PushinPixRespons
   if (!id) {
     throw new Error("transactionId ausente.");
   }
-  try {
-    return await pushinFetch<PushinPixResponse>(`/transaction/${encodeURIComponent(id)}`, {
-      method: "GET",
-    });
-  } catch (error: any) {
-    // Algumas contas/ambientes expõem o endpoint em /pix/transaction/{id}
-    if ((error?.message || "").toLowerCase().includes("could not be found")) {
-      return pushinFetch<PushinPixResponse>(`/pix/transaction/${encodeURIComponent(id)}`, {
-        method: "GET",
-      });
+  const encodedId = encodeURIComponent(id);
+  const paths = [
+    `/transaction/${encodedId}`,
+    `/transactions/${encodedId}`, // alguns ambientes usam plural
+    `/pix/transaction/${encodedId}`,
+    `/pix/transactions/${encodedId}`,
+  ];
+
+  let lastError: any;
+  for (const path of paths) {
+    try {
+      return await pushinFetch<PushinPixResponse>(path, { method: "GET" });
+    } catch (error: any) {
+      lastError = error;
+      const msg = (error?.message || "").toLowerCase();
+      if (!msg.includes("not found") && !msg.includes("could not be found") && !msg.includes("404")) {
+        throw error;
+      }
+      // se 404, tenta o próximo path da lista
     }
-    throw error;
   }
+
+  throw lastError || new Error("Não foi possível consultar a transação PIX.");
 }
 
 export type { PushinPixResponse };

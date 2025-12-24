@@ -813,12 +813,6 @@ export default function BarbershopsPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email do Proprietrio</Label>
                                     <Input id="email" name="email" type="email" value={formState.email || ''} onChange={handleFormChange} disabled />
-                                    <div className="flex items-start gap-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-300">
-                                        <AlertCircleIcon className="h-4 w-4 mt-0.5 shrink-0" />
-                                        <div className='text-xs'>
-                                            <p>A alterao do e-mail de login deve ser feita diretamente no Firebase Console para garantir a segurana.</p>
-                                        </div>
-                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">WhatsApp do Propriio</Label>
