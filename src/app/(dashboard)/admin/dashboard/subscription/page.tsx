@@ -118,10 +118,12 @@ export default function SubscriptionPage() {
         const checkUpgrade = async () => {
             const updated = await fetchBarbershop({ showLoading: false, suppressToast: true });
             if (!isActive || !updated) return;
-            if (updated.plan === "Premium") {
+            // Evita sobrescrever o toast de sucesso quando já marcado como pago
+            if (updated.plan === "Premium" && pixStatus !== "paid") {
                 toast({
                     title: "Upgrade concluido!",
                     description: "Seu plano foi atualizado para Premium com sucesso.",
+                    duration: 10000,
                 });
                 setIsUpgradeModalOpen(false);
             }
@@ -132,7 +134,7 @@ export default function SubscriptionPage() {
             isActive = false;
             clearInterval(intervalId);
         };
-    }, [isUpgradeModalOpen, barbershopId, fetchBarbershop, toast]);
+    }, [isUpgradeModalOpen, barbershopId, fetchBarbershop, toast, pixStatus]);
 
     const clearPixPolling = () => {
         if (pollRef.current) {
@@ -242,9 +244,10 @@ export default function SubscriptionPage() {
             setUpgradeCost(planPrices.Premium);
         } else {
             const rawDiff = Math.ceil((normalizedExpiry.getTime() - today.getTime()) / MS_PER_DAY);
-            const daysRemaining = Math.max(0, Math.min(30, rawDiff));
+            const daysRemaining = Math.max(0, rawDiff);
             const dailyCostBasic = planPrices[BASIC_PLAN] / 30;
             const creditRemaining = dailyCostBasic * daysRemaining;
+            // Nova regra: cobrar valor cheio do Premium menos crédito dos dias restantes do Básico
             const finalCost = planPrices.Premium - creditRemaining;
             setUpgradeCredit(creditRemaining > 0 ? creditRemaining : 0);
             setUpgradeCost(finalCost > 0 ? finalCost : 0);
@@ -277,9 +280,12 @@ export default function SubscriptionPage() {
                     setPixStatus("paid");
                     clearPixPolling();
                     clearRegenTimeout();
-                    toast({ title: "Pagamento confirmado!", description: "Plano Premium ativado." });
+                    toast({
+                        title: "Pagamento confirmado!",
+                        description: "Plano Premium ativado.",
+                        duration: 10000,
+                    });
                     await fetchBarbershop({ showLoading: false, suppressToast: true });
-                    setIsUpgradeModalOpen(false);
                 } else if (normalizedStatus === "canceled") {
                     setPixStatus("canceled");
                     clearPixPolling();
@@ -313,6 +319,20 @@ export default function SubscriptionPage() {
         regenRef.current = setTimeout(() => {
             void generatePixCharge();
         }, 60000);
+    };
+
+    const handleManualCheckPayment = async () => {
+        if (!pixCharge?.transactionId) return;
+        await pollPaymentStatus(pixCharge.transactionId);
+        const status = (pixStatus || "").toLowerCase();
+        if (status !== "paid") {
+            toast({
+                title: "Pagamento não confirmado",
+                description: "Ainda aguardando confirmação do PIX. Tente novamente em instantes.",
+                variant: "destructive",
+                duration: 4000,
+            });
+        }
     };
 
     const generatePixCharge = async () => {
@@ -428,110 +448,144 @@ export default function SubscriptionPage() {
             
         </div>
 
-        <Dialog open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen}>
+                <Dialog open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Crown className="h-6 w-6 text-primary"/>Upgrade para o Plano Premium
+                    <DialogTitle className="flex items-center justify-center gap-2 text-center">
+                        <Crown className="h-6 w-6 text-primary" />
+                        Upgrade para o Plano Premium realizado com sucesso!
                     </DialogTitle>
-                    <DialogDescription>
-                        Complete a transição para o plano Premium e desbloqueie todos os recursos.
-                    </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <Card className="bg-muted/50 border-dashed">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-center text-lg">Resumo da Cobrança</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-center space-y-1">
-                            {upgradeCredit > 0 && (
-                                <p className="text-sm text-green-500">
-                                    Crédito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano Básico.
-                                </p>
-                            )}
-                            <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
-                            <p className="text-xs text-muted-foreground">
-                            Valor proporcional para upgrade imediato. A proxima cobranca sera o valor cheio do plano.
-                            </p>
-                        </CardContent>
-                    </Card>
-                    
-                    <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4">
-                        <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold flex items-center gap-2">
-                                <QrCode className="h-4 w-4" />
-                                Pagamento via PIX
-                            </p>
-                            <Badge variant={pixStatus === "paid" ? "default" : "secondary"}>
-                                {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando"}
-                            </Badge>
-                        </div>
-
-                        {!pixCharge && (
-                            <Button className="w-full" variant="outline" onClick={generatePixCharge} disabled={isGeneratingPix}>
-                                {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                                Gerar cobrança PIX
-                            </Button>
-                        )}
-
-                        {pixCharge && (
-                            <div className="space-y-3">
-                                {pixCharge.qrCodeBase64 ? (
-                                    <div className="flex justify-center">
-                                        <img
-                                            src={pixCharge.qrCodeBase64}
-                                            alt="QR Code PIX"
-                                            className="max-h-48 rounded-md border bg-white p-2"
-                                        />
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground text-center">
-                                        Use o codigo copia e cola abaixo no seu app do banco.
+                {pixStatus === "paid" ? (
+                    <div className="py-6 space-y-6">
+                        <Card className="bg-emerald-500/10 border-emerald-500/30 text-center">
+                            <CardHeader className="space-y-2 items-center">
+                                <CardTitle className="flex items-center justify-center gap-2 text-emerald-400 text-xl text-center">
+                                    <CheckCircle className="h-5 w-5" />
+                                    🎉 Pagamento confirmado
+                                </CardTitle>
+                                <CardDescription className="text-sm text-emerald-100/80 text-center">
+                                    O plano Premium está ativo e todas as funcionalidades de WhatsApp foram liberadas.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="text-sm text-emerald-50/90 space-y-1 text-center">
+                                <p>Use automações, lembretes e integrações de WhatsApp sem restrições.</p>
+                                <p className="text-emerald-100">A próxima cobrança seguirá normalmente no ciclo do Premium.</p>
+                            </CardContent>
+                        </Card>
+                        <DialogFooter className="flex justify-center">
+                            <DialogClose asChild>
+                                <Button variant="default">Fechar</Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </div>
+                ) : (
+                    <>
+                        <div className="py-4 space-y-4">
+                            <Card className="bg-muted/50 border-dashed">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-center text-lg">Resumo da Cobran?a</CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-center space-y-1">
+                                    {upgradeCredit > 0 && (
+                                        <p className="text-sm text-green-500">
+                                            Cr?dito de {formatCurrency(upgradeCredit)} referente aos dias restantes do plano B?sico.
+                                        </p>
+                                    )}
+                                    <p className="text-4xl font-bold">{formatCurrency(upgradeCost)}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Valor proporcional para upgrade imediato. A próxima cobrança será o valor cheio do plano.
                                     </p>
+                                </CardContent>
+                            </Card>
+                            
+                            <div className="space-y-3 rounded-md border border-dashed bg-muted/40 p-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="font-semibold flex items-center gap-2">
+                                        <QrCode className="h-4 w-4" />
+                                        Pagamento via PIX
+                                    </p>
+                                    <Badge variant={pixStatus === "paid" ? "default" : "secondary"}>
+                                        {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando"}
+                                    </Badge>
+                                </div>
+
+                                {!pixCharge && (
+                                    <Button className="w-full" variant="outline" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                        {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                        Gerar cobran?a PIX
+                                    </Button>
                                 )}
 
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium">Codigo copia e cola</p>
-                                    <div className="flex gap-2">
-                                        <Input readOnly value={pixCharge.qrCode || ""} />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="shrink-0"
-                                            onClick={() => {
-                                                navigator.clipboard?.writeText(pixCharge.qrCode);
-                                                toast({ title: "Copiado", description: "Codigo PIX copiado." });
-                                            }}
-                                        >
-                                            <Copy className="mr-1 h-4 w-4" />
-                                            Copiar
-                                        </Button>
+                                {pixCharge && (
+                                    <div className="space-y-3">
+                                        {pixCharge.qrCodeBase64 ? (
+                                            <div className="flex justify-center">
+                                                <img
+                                                    src={pixCharge.qrCodeBase64}
+                                                    alt="QR Code PIX"
+                                                    className="max-h-48 rounded-md border bg-white p-2"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground text-center">
+                                                Use o codigo copia e cola abaixo no seu app do banco.
+                                            </p>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-medium">Codigo copia e cola</p>
+                                            <div className="flex gap-2">
+                                                <Input readOnly value={pixCharge.qrCode || ""} />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="shrink-0"
+                                                    onClick={() => {
+                                                        navigator.clipboard?.writeText(pixCharge.qrCode);
+                                                        toast({ title: "Copiado", description: "Codigo PIX copiado." });
+                                                    }}
+                                                >
+                                                    <Copy className="mr-1 h-4 w-4" />
+                                                    Copiar
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Pague em qualquer app bancario ou carteira digital.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <span>Status: {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando pagamento..."}</span>
+                                            <span>Valor: {formatCurrency(upgradeCost)}</span>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" className="w-full" onClick={generatePixCharge} disabled={isGeneratingPix}>
+                                                {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                                                Gerar novo PIX
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Pague em qualquer app bancario ou carteira digital.
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span>Status: {pixStatus === "paid" ? "Pago" : pixStatus === "canceled" ? "Cancelado" : "Aguardando pagamento..."}</span>
-                                    <span>Valor: {formatCurrency(upgradeCost)}</span>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <Button variant="outline" className="w-full" onClick={generatePixCharge} disabled={isGeneratingPix}>
-                                        {isGeneratingPix ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                                        Gerar novo PIX
-                                    </Button>
-                                </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Fechar</Button>
-                    </DialogClose>
-                </DialogFooter>
+                        </div>
+                        <DialogFooter>
+                            <div className="flex w-full justify-between gap-2">
+                                <Button
+                                    variant="default"
+                                    onClick={handleManualCheckPayment}
+                                    disabled={!pixCharge?.transactionId || pixStatus === "paid" || pixStatus === "canceled"}
+                                >
+                                    Verificar pagamento
+                                </Button>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Fechar</Button>
+                                </DialogClose>
+                            </div>
+                        </DialogFooter>
+                    </>
+                )}
             </DialogContent>
         </Dialog>
     </div>

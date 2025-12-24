@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     const status = (data.status || "").toLowerCase();
 
     if (status === "paid") {
-      const newExpiry = nextPremiumExpiry();
+      const newExpiry = nextPremiumExpiry(shop.expiryDate ? new Date(shop.expiryDate) : undefined);
       await updateBarbershop(barbershopId, {
         plan: "Premium",
         status: "Ativa",

@@ -20,18 +20,28 @@ export function calculateUpgradeCost(barbershop: Barbershop) {
 
   if (expiryDate && expiryDate > today) {
     remainingDays = Math.ceil((expiryDate.getTime() - today.getTime()) / MS_PER_DAY);
-    remainingDays = Math.max(0, Math.min(BILLING_DAYS, remainingDays));
+    remainingDays = Math.max(0, remainingDays);
   }
 
   const dailyBasic = BASIC_PRICE / BILLING_DAYS;
   const credit = isBasicPlan(barbershop.plan) ? remainingDays * dailyBasic : 0;
+  // Nova regra: cobrar o valor cheio do Premium menos o crédito dos dias restantes do Básico
   const amount = Math.max(0, PREMIUM_PRICE - credit);
 
   return { amount, credit, remainingDays };
 }
 
-export function nextPremiumExpiry() {
-  return addDays(startOfDay(new Date()), BILLING_DAYS);
+export function nextPremiumExpiry(currentExpiry?: Date | string | null) {
+  const today = startOfDay(new Date());
+  let base = today;
+  if (currentExpiry) {
+    const parsed = startOfDay(new Date(currentExpiry));
+    if (!Number.isNaN(parsed.getTime()) && parsed > today) {
+      base = parsed;
+    }
+  }
+  // adiciona +30 dias preservando o saldo de dias se o vencimento atual for maior que hoje
+  return addDays(base, BILLING_DAYS);
 }
 
 export function resolveWebhookUrl(barbershopId: string) {

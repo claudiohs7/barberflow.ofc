@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addDays, startOfDay } from "date-fns";
 import { getBarbershopBySlugOrId, updateBarbershop } from "@/server/db/repositories/barbershops";
+import { nextPremiumExpiry } from "@/server/pushinpay/upgrade";
 
 type PushinWebhookPayload = {
   id?: string;
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (status === "paid") {
       const shop = await getBarbershopBySlugOrId(barbershopId);
       if (shop) {
-        const newExpiry = addDays(startOfDay(new Date()), 30);
+        const newExpiry = nextPremiumExpiry(shop.expiryDate ? new Date(shop.expiryDate) : undefined);
         await updateBarbershop(barbershopId, {
           plan: "Premium",
           status: "Ativa",
