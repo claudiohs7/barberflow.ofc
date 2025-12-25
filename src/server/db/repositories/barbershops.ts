@@ -64,6 +64,30 @@ function normalizeDate(value?: Date | string | null) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function serializeJsonField(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function parseJsonField<T>(value: unknown): T | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof value === "object") return value as T;
+  return undefined;
+}
+
 async function findExistingBarbershopByCpfCnpj(normalizedCpfCnpj: string, excludeId?: string) {
   const matches = await prisma.barbershop.findMany({
     where: {
@@ -96,8 +120,8 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
     plan: shop.plan === "PREMIUM" ? "Premium" : "B├ísico",
     status: mapStatusToDomain(shop.status) as Barbershop["status"],
     expiryDate: shop.expiryDate?.toISOString(),
-    address: (shop.addressJson as Address | null) ?? undefined,
-    operatingHours: (shop.operatingHoursJson as OperatingHour[] | null) ?? undefined,
+    address: parseJsonField<Address>(shop.addressJson),
+    operatingHours: parseJsonField<OperatingHour[]>(shop.operatingHoursJson),
     logoUrl: shop.logoUrl ?? undefined,
     whatsappStatus: shop.whatsappStatus as Barbershop["whatsappStatus"],
     qrCodeBase64: shop.qrCodeBase64 ?? undefined,
@@ -112,7 +136,7 @@ function toDomain(shop: Prisma.BarbershopGetPayload<{ include: { messageTemplate
       type: tpl.type as MessageTemplate["type"],
       reminderHoursBefore: tpl.reminderHoursBefore ?? null,
     })) || [],
-    bitsafiraInstanceData: (shop.bitsafiraInstanceData as object | null) ?? undefined,
+    bitsafiraInstanceData: parseJsonField<Record<string, any>>(shop.bitsafiraInstanceData),
     createdAt: shop.createdAt?.toISOString(),
   };
 }
@@ -141,15 +165,15 @@ export async function createBarbershop(data: BarbershopCreateInput) {
       plan: mapPlan(data.plan) as any,
       status: mapStatusToDb(data.status),
       expiryDate,
-      addressJson: data.address ? (data.address as Prisma.InputJsonValue) : undefined,
-      operatingHoursJson: data.operatingHours ? (data.operatingHours as Prisma.InputJsonValue) : undefined,
+      addressJson: serializeJsonField(data.address),
+      operatingHoursJson: serializeJsonField(data.operatingHours),
       logoUrl: data.logoUrl,
       whatsappStatus: data.whatsappStatus,
       qrCodeBase64: data.qrCodeBase64,
       bitsafiraInstanceId: data.bitsafiraInstanceId ?? undefined,
       bitSafiraToken: data.bitSafiraToken ?? undefined,
       whatsAppInstanceId: data.whatsAppInstanceId ?? undefined,
-      bitsafiraInstanceData: data.bitsafiraInstanceData ?? undefined,
+      bitsafiraInstanceData: serializeJsonField(data.bitsafiraInstanceData),
     },
     include: { messageTemplates: true },
   });
@@ -181,15 +205,15 @@ export async function updateBarbershop(id: string, data: BarbershopUpdateInput) 
       plan: data.plan ? mapPlan(data.plan) : undefined,
       status: mapStatusToDb(data.status),
       expiryDate,
-      addressJson: data.address ? { set: data.address as Prisma.InputJsonValue } : undefined,
-      operatingHoursJson: data.operatingHours ? { set: data.operatingHours as Prisma.InputJsonValue } : undefined,
+      addressJson: serializeJsonField(data.address),
+      operatingHoursJson: serializeJsonField(data.operatingHours),
       logoUrl: data.logoUrl,
       whatsappStatus: data.whatsappStatus,
       qrCodeBase64: data.qrCodeBase64,
       bitsafiraInstanceId: data.bitsafiraInstanceId,
       bitSafiraToken: data.bitSafiraToken,
       whatsAppInstanceId: data.whatsAppInstanceId,
-      bitsafiraInstanceData: data.bitsafiraInstanceData,
+      bitsafiraInstanceData: serializeJsonField(data.bitsafiraInstanceData),
     },
     include: { messageTemplates: true },
   });
