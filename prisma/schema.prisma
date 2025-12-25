@@ -22,22 +22,22 @@ model announcement {
 }
 
 model appointment {
-  id                 String               @id @default(cuid())
-  barbershopId       String
-  barberId           String?
-  clientId           String?
-  clientName         String?
-  clientPhone        String?              @db.VarChar(50)
-  status             AppointmentStatus    @default(CONFIRMED)
-  startTime          DateTime
-  endTime            DateTime
-  totalDuration      Int?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  barber             barber?              @relation(fields: [barberId], references: [id], map: "Appointment_barberId_fkey")
-  barbershop         barbershop           @relation(fields: [barbershopId], references: [id], map: "Appointment_barbershopId_fkey")
-  client             client?              @relation(fields: [clientId], references: [id], map: "Appointment_clientId_fkey")
-  services           appointmentservice[]
+  id                   String                 @id @default(cuid())
+  barbershopId         String
+  barberId             String?
+  clientId             String?
+  clientName           String?
+  clientPhone          String?                @db.VarChar(50)
+  status               AppointmentStatus      @default(CONFIRMED)
+  startTime            DateTime
+  endTime              DateTime
+  totalDuration        Int?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  barber               barber?                @relation(fields: [barberId], references: [id], map: "Appointment_barberId_fkey")
+  barbershop           barbershop             @relation(fields: [barbershopId], references: [id], map: "Appointment_barbershopId_fkey")
+  client               client?                @relation(fields: [clientId], references: [id], map: "Appointment_clientId_fkey")
+  services             appointmentservice[]
   whatsappMessageQueue whatsappmessagequeue[]
 
   @@index([barberId], map: "Appointment_barberId_fkey")
@@ -57,20 +57,20 @@ model appointmentservice {
 }
 
 model barber {
-  id            String          @id @default(cuid())
-  userId        String?
-  barbershopId  String
-  name          String
-  email         String?
-  phone         String?         @db.VarChar(50)
-  avatarUrl     String?         @db.LongText
-  scheduleJson  Json?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  appointment   appointment[]
-  barbershop    barbershop      @relation(fields: [barbershopId], references: [id], map: "Barber_barbershopId_fkey")
-  user          user?           @relation(fields: [userId], references: [id], map: "Barber_userId_fkey")
-  services      barberservice[]
+  id           String          @id @default(cuid())
+  userId       String?
+  barbershopId String
+  name         String
+  email        String?
+  phone        String?         @db.VarChar(50)
+  avatarUrl    String?         @db.LongText
+  scheduleJson String?         @db.LongText
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  appointment  appointment[]
+  barbershop   barbershop      @relation(fields: [barbershopId], references: [id], map: "Barber_barbershopId_fkey")
+  user         user?           @relation(fields: [userId], references: [id], map: "Barber_userId_fkey")
+  services     barberservice[]
 
   @@index([barbershopId], map: "Barber_barbershopId_fkey")
   @@index([userId], map: "Barber_userId_fkey")
@@ -88,32 +88,32 @@ model barberservice {
 }
 
 model barbershop {
-  id                    String            @id
+  id                    String                 @id
   name                  String
   legalName             String?
-  cpfCnpj               String?           @db.VarChar(50)
+  cpfCnpj               String?                @db.VarChar(50)
   email                 String?
-  phone                 String?           @db.VarChar(50)
-  description           String?           @db.Text
+  phone                 String?                @db.VarChar(50)
+  description           String?                @db.Text
   ownerId               String?
-  plan                  BarbershopPlan    @default(BASIC)
-  status                String?           @db.VarChar(50)
+  plan                  BarbershopPlan         @default(BASIC)
+  status                String?                @db.VarChar(50)
   expiryDate            DateTime?
-  addressJson           Json?
-  operatingHoursJson    Json?
-  logoUrl               String?           @db.LongText
-  whatsappStatus        String?           @db.VarChar(100)
-  qrCodeBase64          String?           @db.Text
+  addressJson           String?                @db.LongText
+  operatingHoursJson    String?                @db.LongText
+  logoUrl               String?                @db.LongText
+  whatsappStatus        String?                @db.VarChar(100)
+  qrCodeBase64          String?                @db.Text
   bitsafiraInstanceId   String?
-  bitSafiraToken        String?           @db.Text
+  bitSafiraToken        String?                @db.Text
   whatsAppInstanceId    String?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  bitsafiraInstanceData Json?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  bitsafiraInstanceData String?                @db.LongText
   announcement          announcement[]
   appointment           appointment[]
   barber                barber[]
-  user                  user?             @relation(fields: [ownerId], references: [id], map: "Barbershop_ownerId_fkey")
+  user                  user?                  @relation(fields: [ownerId], references: [id], map: "Barbershop_ownerId_fkey")
   client                client[]
   expense               expense[]
   messageTemplates      messagetemplate[]
@@ -195,19 +195,19 @@ model whatsappmessagelog {
 }
 
 model whatsappmessagequeue {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   barbershopId  String
   appointmentId String
-  templateType  String     @db.VarChar(100)
+  templateType  String      @db.VarChar(100)
   scheduledFor  DateTime
-  status        String     @db.VarChar(20)
-  attempts      Int        @default(0)
-  lastError     String?    @db.Text
+  status        String      @db.VarChar(20)
+  attempts      Int         @default(0)
+  lastError     String?     @db.Text
   sentAt        DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  barbershop    barbershop @relation(fields: [barbershopId], references: [id], map: "WhatsappMessageQueue_barbershopId_fkey")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   appointment   appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade, map: "WhatsappMessageQueue_appointmentId_fkey")
+  barbershop    barbershop  @relation(fields: [barbershopId], references: [id], map: "WhatsappMessageQueue_barbershopId_fkey")
 
   @@unique([appointmentId, templateType], map: "WhatsappMessageQueue_appointment_template_unique")
   @@index([barbershopId], map: "WhatsappMessageQueue_barbershopId_fkey")
@@ -301,6 +301,31 @@ model webhook {
   @@index([barbershopId], map: "Webhook_barbershopId_fkey")
 }
 
+model tutorialvideo {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  youtubeUrl  String   @db.VarChar(500)
+  youtubeId   String?  @db.VarChar(50)
+  targetEmail String?  @db.VarChar(255)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([targetEmail], map: "TutorialVideo_targetEmail_idx")
+  @@index([enabled], map: "TutorialVideo_enabled_idx")
+  @@index([createdAt], map: "TutorialVideo_createdAt_idx")
+}
+
+model siteappearance {
+  id                  Int      @id @default(autoincrement())
+  homeHeroDesktopPath String?  @db.VarChar(500)
+  homeHeroMobilePath  String?  @db.VarChar(500)
+  updatedAt           DateTime @updatedAt
+
+  @@map("SiteAppearance")
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -325,29 +350,4 @@ enum AppointmentStatus {
 enum BarbershopPlan {
   BASIC
   PREMIUM
-}
-
-model tutorialvideo {
-  id          String   @id @default(cuid())
-  title       String
-  description String?  @db.Text
-  youtubeUrl  String   @db.VarChar(500)
-  youtubeId   String?  @db.VarChar(50)
-  targetEmail String?  @db.VarChar(255)
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([targetEmail], map: "TutorialVideo_targetEmail_idx")
-  @@index([enabled], map: "TutorialVideo_enabled_idx")
-  @@index([createdAt], map: "TutorialVideo_createdAt_idx")
-}
-
-model siteappearance {
-  id                Int      @id @default(autoincrement())
-  homeHeroDesktopPath String? @db.VarChar(500)
-  homeHeroMobilePath  String? @db.VarChar(500)
-  updatedAt         DateTime @updatedAt
-
-  @@map("SiteAppearance")
 }
