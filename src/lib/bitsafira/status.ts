@@ -7,6 +7,10 @@ const SCAN_STATUSES = new Set(["AWAITING_SCAN", "SCAN_QR_CODE", "LOADING_QR", "S
  * Normaliza o status retornado pela API do BitSafira para os estados usados no front-end.
  */
 export function mapBitSafiraStatus(status?: string): WhatsAppStatus {
+  if (typeof status === "number") {
+    return status === 1 ? "CONNECTED" : "DISCONNECTED";
+  }
+
   if (!status) {
     return "DISCONNECTED";
   }
@@ -39,9 +43,20 @@ export function mapBitSafiraStatus(status?: string): WhatsAppStatus {
 /**
  * Extrai o status reportado pelo BitSafira tentando cobrir os diferentes formatos de resposta.
  */
-export function extractBitSafiraStatus(payload?: { status?: string; conexao?: { status?: string } }) {
+export function extractBitSafiraStatus(payload?: {
+  status?: string;
+  conexao?: { status?: string; instance?: { status?: string; connected?: boolean } };
+  situacao?: number;
+}) {
   if (!payload) return undefined;
-  return payload.status ?? payload.conexao?.status;
+  if (typeof payload.situacao === "number") {
+    return payload.situacao;
+  }
+
+  const instanceStatus = payload.conexao?.instance?.status;
+  const instanceConnected = payload.conexao?.instance?.connected === true ? "CONNECTED" : undefined;
+
+  return payload.status ?? payload.conexao?.status ?? instanceStatus ?? instanceConnected;
 }
 
 export function normalizeQrCodeBase64(value?: string | null) {
