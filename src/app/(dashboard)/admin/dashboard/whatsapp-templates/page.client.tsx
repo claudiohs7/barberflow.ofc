@@ -229,7 +229,7 @@ export default function WhatsAppTemplatesPage() {
         isSavingRef.current = false;
       }
     },
-    [barbershopId, barbershop, normalizeTemplates, syncTemplates, toast]
+    [barbershopId, normalizeTemplates, syncTemplates, toast]
   );
 
   useEffect(() => {

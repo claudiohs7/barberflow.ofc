@@ -117,21 +117,83 @@ export async function POST(request: Request) {
       const connectResponse = await bitSafira.connectInstance(connectPayload);
       console.log(`[${barbershopId}] Resposta da conexao:`, connectResponse);
 
-      if (connectResponse.status === 200 && connectResponse.dados) {
-        const dados = connectResponse.dados;
-        const statusFromConnect = extractBitSafiraStatus(dados) ?? currentInstanceStatus;
+      const applyConnectResponse = (dados: any, statusFallback?: WhatsAppStatus) => {
+        const statusFromConnect = extractBitSafiraStatus(dados) ?? statusFallback ?? currentInstanceStatus;
         const normalizedConnectStatus = mapBitSafiraStatus(statusFromConnect);
         console.log(`[${barbershopId}] Status retornado pela conexao: ${statusFromConnect} (normalizado: ${normalizedConnectStatus})`);
         currentInstanceStatus = normalizedConnectStatus;
-        qrCodeBase64 = normalizeQrCodeBase64(dados.qrCode || dados.qr) ?? qrCodeBase64;
+        qrCodeBase64 = normalizeQrCodeBase64(dados?.qrCode || dados?.qr) ?? qrCodeBase64;
         if (normalizedConnectStatus === 'CONNECTED') {
           qrCodeBase64 = null;
         }
-        instanceMetadata = { ...(instanceMetadata || {}), ...dados };
+        instanceMetadata = { ...(instanceMetadata || {}), ...(dados || {}) };
+      };
+
+      let connectOk = false;
+
+      if (connectResponse.status === 200 && connectResponse.dados) {
+        applyConnectResponse(connectResponse.dados);
+        connectOk = true;
       } else {
-        console.error(`[${barbershopId}] Falha ao conectar instancia ou obter QR Code:`, connectResponse.mensagem || connectResponse.message);
+        console.warn(
+          `[${barbershopId}] Falha ao conectar instancia ou obter QR Code (status ${connectResponse.status}):`,
+          connectResponse.mensagem || connectResponse.message
+        );
+      }
+
+      // Se não conseguir QR ou status válido, tenta recriar a instância e conectar de novo.
+      if (!connectOk || (!qrCodeBase64 && currentInstanceStatus !== 'CONNECTED')) {
+        console.warn(`[${barbershopId}] Tentando recriar instancia BitSafira e reconectar para obter novo QR.`);
+        try {
+          await bitSafira.deleteInstance({ id: instanceId });
+        } catch (err: any) {
+          console.warn(`[${barbershopId}] Nao foi possivel excluir instancia ${instanceId} antes de recriar:`, err?.message);
+        }
+
+        const recreatePayload: CreateInstancePayload = {
+          id: "",
+          urlWebhook: webhookUrl,
+          descricao: instanceDescription,
+          token: bitSafiraToken,
+        };
+        const recreateRes = await bitSafira.createInstance(recreatePayload);
+        console.log(`[${barbershopId}] Resposta da recriacao da instancia:`, recreateRes);
+
+        if ([200, 201].includes(recreateRes.status) && recreateRes.dados && recreateRes.dados.id) {
+          instanceId = recreateRes.dados.id;
+          instanceMetadata = recreateRes.dados;
+          const retryConnect = await bitSafira.connectInstance({ id: instanceId });
+          console.log(`[${barbershopId}] Resposta da conexao apos recriacao:`, retryConnect);
+          if (retryConnect.status === 200 && retryConnect.dados) {
+            applyConnectResponse(retryConnect.dados);
+            connectOk = true;
+          } else {
+            console.error(
+              `[${barbershopId}] Falha ao conectar apos recriar instancia:`,
+              retryConnect.mensagem || retryConnect.message
+            );
+          }
+        } else {
+          console.error(
+            `[${barbershopId}] Falha ao recriar instancia BitSafira:`,
+            recreateRes.mensagem || recreateRes.message
+          );
+        }
+      }
+
+      if (!connectOk) {
         currentInstanceStatus = 'ERROR';
         qrCodeBase64 = null;
+        await updateBarbershop(barbershop.id, {
+          bitsafiraInstanceId: instanceId,
+          whatsappStatus: currentInstanceStatus,
+          qrCodeBase64: qrCodeBase64,
+          bitsafiraInstanceData: instanceMetadata ?? undefined,
+        });
+        return NextResponse.json(
+          { message: connectResponse.mensagem || connectResponse.message || 'Falha ao gerar QR Code.' },
+          { status: connectResponse.status || 500 }
+        );
       }
 
       await updateBarbershop(barbershop.id, {

@@ -161,7 +161,8 @@ export default function WhatsAppPage() {
       if (!res.ok || json.success === false) {
         throw new Error(json.message || "Não foi possível validar a instância.");
       }
-      const nextStatus = (json.status as WhatsAppStatus) || barbershop?.whatsappStatus;
+      const currentStatus = statusRef.current;
+      const nextStatus = (json.status as WhatsAppStatus) || currentStatus;
       const nextQr = json.data?.qrCode || json.data?.qr || json.qrCodeBase64 || null;
       setBarbershop((prev) =>
         prev
@@ -199,25 +200,21 @@ export default function WhatsAppPage() {
     } finally {
       setIsValidating(false);
     }
-  }, [barbershopId, barbershop?.whatsappStatus, toast]);
+  }, [barbershopId, toast]);
 
   const loadBarbershop = useCallback(
-    async (opts: { withStatusValidate?: boolean } = {}) => {
+    async (opts: { silent?: boolean } = {}) => {
       if (!barbershopId) {
+        setBarbershop(null);
         setIsLoading(false);
         return;
       }
-      setIsLoading(true);
+      setIsLoading(!opts.silent);
       try {
         const response = await fetchJson<{ data: Barbershop }>(`/api/barbershops/${barbershopId}`);
         const shop = response.data;
         setBarbershop(shop);
-        const isBasicPlan = (shop?.plan || "").toLowerCase().startsWith("b");
-
-        if (opts.withStatusValidate) {
-          // dispara validação de status ao entrar na aba, para trazer conexão atualizada
-          await handleValidateStatus();
-        }
+        statusRef.current = shop?.whatsappStatus;
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -228,11 +225,11 @@ export default function WhatsAppPage() {
         setIsLoading(false);
       }
     },
-    [barbershopId, toast, handleValidateStatus]
+    [barbershopId, toast]
   );
 
   useEffect(() => {
-    loadBarbershop({ withStatusValidate: true });
+    void loadBarbershop();
   }, [loadBarbershop]);
 
   useEffect(() => {
@@ -242,20 +239,10 @@ export default function WhatsAppPage() {
     }
   }, [barbershop?.whatsappStatus]);
 
-  useEffect(() => {
-    if (!qrGeneratedAt) return;
-    if (statusRef.current === "CONNECTED") return;
-
-    const timer = setTimeout(async () => {
-      if (!barbershopId || isConnecting || isValidating) return;
-      await handleValidateStatus();
-      if (statusRef.current !== "CONNECTED" && !isConnecting) {
-        await handleConnect();
-      }
-    }, 25000);
-
-    return () => clearTimeout(timer);
-  }, [qrGeneratedAt, barbershopId, isConnecting, isValidating, handleValidateStatus, handleConnect]);
+  // Desabilita polling automático para evitar loops de requisições; validação agora é manual.
+  const handleReload = () => {
+    void loadBarbershop();
+  };
 
   const handleDisconnect = async () => {
     if (!barbershopId) return;
@@ -291,9 +278,12 @@ export default function WhatsAppPage() {
 
   if (isBarbershopIdLoading || isLoading) {
     return (
-      <div className="flex h-[70vh] flex-col items-center justify-center gap-2 text-center">
+      <div className="flex h-[70vh] flex-col items-center justify-center gap-3 text-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Carregando configurações do WhatsApp...</p>
+        <Button variant="outline" size="sm" onClick={handleReload}>
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -347,10 +337,15 @@ export default function WhatsAppPage() {
             Conecte sua instância no WhatsApp e personalize as mensagens automáticas da barbearia.
           </p>
         </div>
-        <Badge className={cn("flex items-center gap-2 border px-3 py-1.5 text-sm", statusInfo.className)}>
-          <statusInfo.icon className="h-4 w-4" />
-          {statusInfo.label}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleReload} disabled={isLoading}>
+            Recarregar dados
+          </Button>
+          <Badge className={cn("flex items-center gap-2 border px-3 py-1.5 text-sm", statusInfo.className)}>
+            <statusInfo.icon className="h-4 w-4" />
+            {statusInfo.label}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">

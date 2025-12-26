@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -567,9 +568,12 @@ export default function SubscriptionPage() {
                                         <div className="space-y-3">
                                             {pixCharge.qrCodeBase64 ? (
                                                 <div className="flex justify-center">
-                                                    <img
+                                                    <Image
                                                         src={pixCharge.qrCodeBase64}
                                                         alt="QR Code PIX"
+                                                        width={192}
+                                                        height={192}
+                                                        unoptimized
                                                         className="max-h-48 rounded-md border bg-white p-2"
                                                     />
                                                 </div>

@@ -14,6 +14,17 @@ export function setAccessToken(token: string | null) {
   }
 }
 
+const pendingRequests = new Map<string, Promise<any>>();
+const recentCache = new Map<string, { ts: number; data: any }>();
+const DEDUPE_WINDOW_MS = 3000;
+
+const makeCacheKey = (input: RequestInfo | URL, init: RequestInit): string | null => {
+  if (typeof input !== "string") return null;
+  const method = (init.method || "GET").toUpperCase();
+  if (method !== "GET") return null;
+  return `${method}:${input}`;
+};
+
 function extractErrorMessage(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const data = payload as any;
@@ -53,37 +64,69 @@ export async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): 
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(resolveUrl(input), {
-    ...init,
-    headers,
-    credentials: init.credentials ?? "omit",
-  });
+  const cacheKey = makeCacheKey(input, init);
+  const now = Date.now();
 
-  const contentType = res.headers.get("content-type") || "";
-
-  if (!res.ok) {
-    if (contentType.includes("text/html")) {
-      throw new Error(res.statusText || `Erro ${res.status}`);
+  if (cacheKey) {
+    const cached = recentCache.get(cacheKey);
+    if (cached && now - cached.ts < DEDUPE_WINDOW_MS) {
+      return structuredClone(cached.data) as T;
     }
+    const inflight = pendingRequests.get(cacheKey);
+    if (inflight) {
+      return inflight as Promise<T>;
+    }
+  }
 
-    if (contentType.includes("application/json")) {
-      try {
-        const data = await res.json();
-        const message = extractErrorMessage(data);
-        throw new Error(message || res.statusText || "Falha na requisicao.");
-      } catch (e: any) {
-        if (e instanceof Error && e.message) throw e;
+  const requestPromise = fetch(resolveUrl(input), {
+      ...init,
+      headers,
+      credentials: init.credentials ?? "omit",
+    })
+    .then(async (res) => {
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!res.ok) {
+        if (contentType.includes("text/html")) {
+          throw new Error(res.statusText || `Erro ${res.status}`);
+        }
+
+        if (contentType.includes("application/json")) {
+          try {
+            const data = await res.json();
+            const message = extractErrorMessage(data);
+            throw new Error(message || res.statusText || "Falha na requisicao.");
+          } catch (e: any) {
+            if (e instanceof Error && e.message) throw e;
+          }
+        }
+
+        const textBody = await res.text();
+        const stripped = textBody.replace(/<[^>]+>/g, "").trim();
+        throw new Error(stripped || res.statusText || `Erro ${res.status}`);
       }
-    }
 
-    const textBody = await res.text();
-    const stripped = textBody.replace(/<[^>]+>/g, "").trim();
-    throw new Error(stripped || res.statusText || `Erro ${res.status}`);
+      if (contentType.includes("application/json")) {
+        return res.json() as Promise<T>;
+      }
+
+      return res.text() as unknown as T;
+    })
+    .then((data) => {
+      if (cacheKey) {
+        recentCache.set(cacheKey, { ts: Date.now(), data });
+      }
+      return data;
+    })
+    .finally(() => {
+      if (cacheKey) {
+        pendingRequests.delete(cacheKey);
+      }
+    });
+
+  if (cacheKey) {
+    pendingRequests.set(cacheKey, requestPromise);
   }
 
-  if (contentType.includes("application/json")) {
-    return res.json() as Promise<T>;
-  }
-
-  return res.text() as unknown as T;
+  return requestPromise;
 }

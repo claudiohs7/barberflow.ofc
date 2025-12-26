@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start -p 3002",
     "lint": "eslint .",
+    "test": "npm run lint && npm run typecheck",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev"

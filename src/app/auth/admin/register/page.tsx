@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { capitalizeWords, formatCurrency, cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -151,7 +151,7 @@ export default function AdminRegisterPage() {
     return e;
   };
 
-  const formatCpfCnpjValue = (value: string) => {
+  const formatCpfCnpjValue = useCallback((value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 14);
     if (digits.length <= 11) {
       return digits
@@ -164,9 +164,9 @@ export default function AdminRegisterPage() {
       .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
       .replace(/\.(\d{3})(\d)/, ".$1/$2")
       .replace(/(\d{4})(\d)/, "$1-$2");
-  };
+  }, []);
 
-  const validateDocument = async (options?: { silent?: boolean }) => {
+  const validateDocument = useCallback(async (options?: { silent?: boolean }) => {
     const digits = cpfCnpj.replace(/\D/g, "");
     const type = digits.length === 11 ? "cpf" : digits.length === 14 ? "cnpj" : null;
     if (!type) return true;
@@ -228,7 +228,7 @@ export default function AdminRegisterPage() {
       }
       return false;
     }
-  };
+  }, [cpfCnpj, formatCpfCnpjValue, form, toast]);
 
   useEffect(() => {
     const digits = cpfCnpj.replace(/\D/g, "");
@@ -241,7 +241,7 @@ export default function AdminRegisterPage() {
     if (step !== 1) return;
     if (lastDocumentValidation.current?.value === digits) return;
     validateDocument({ silent: true });
-  }, [cpfCnpj, step]);
+  }, [cpfCnpj, form, step, validateDocument]);
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;

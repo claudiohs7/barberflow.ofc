@@ -15,6 +15,7 @@
 
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import Image from "next/image";
 
 
 
@@ -3032,9 +3033,12 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
             <Label>Barbearia</Label>
             <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
               {barbershop?.logoUrl ? (
-                <img
+                <Image
                   src={barbershop.logoUrl}
                   alt={barbershop.name || "Logo da barbearia"}
+                  width={32}
+                  height={32}
+                  unoptimized
                   className="h-8 w-8 rounded-full object-cover bg-muted"
                 />
               ) : (
@@ -3921,4 +3925,3 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 }
-
