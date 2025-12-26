@@ -182,7 +182,7 @@ import { Combobox } from "@/components/ui/combobox";
 
 
 
-import { addDays, addMinutes, getDay, parse, startOfDay, endOfDay, isSameDay, isWithinInterval as isWithinIntervalFns } from "date-fns";
+import { addDays, addMinutes, getDay, parse, startOfDay, endOfDay, isSameDay, isValid, isWithinInterval as isWithinIntervalFns } from "date-fns";
 
 import { Input } from "@/components/ui/input";
 
@@ -1660,6 +1660,12 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
+        if (!Array.isArray(barbershop.operatingHours)) {
+          setError(new Error("Horários da barbearia estão configurados de forma inválida."));
+          setIsLoadingTimes(false);
+          return;
+        }
+
         const barbershopSchedule = findScheduleByDayIndex(barbershop.operatingHours, dayIndex);
 
 
@@ -1724,6 +1730,12 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
+        if (!Array.isArray(selectedBarber.schedule)) {
+          setError(new Error("Horários do barbeiro estão configurados de forma inválida."));
+          setIsLoadingTimes(false);
+          return;
+        }
+
         const barberSchedule = findScheduleByDayIndex(selectedBarber.schedule, dayIndex);
 
 
@@ -1740,7 +1752,7 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
-          setError(new Error("O barbeiro n?o trabalha neste dia."));
+          setError(new Error("O barbeiro não trabalha neste dia."));
 
 
 
@@ -1909,92 +1921,24 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
         const barbershopOpenTime = parse(barbershopSchedule.open, "HH:mm", selectedDate);
-
-
-
-
-
-
-
         const barbershopCloseTime = parse(barbershopSchedule.close, "HH:mm", selectedDate);
-
-
-
-
-
-
-
         const barberStartTime = parse(barberSchedule.start, "HH:mm", selectedDate);
-
-
-
-
-
-
-
         const barberEndTime = parse(barberSchedule.end, "HH:mm", selectedDate);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        const timeValues = [barbershopOpenTime, barbershopCloseTime, barberStartTime, barberEndTime];
+        if (!timeValues.every(isValid)) {
+          setError(new Error("Horários configurados de forma inválida para este dia."));
+          setIsLoadingTimes(false);
+          return;
+        }
 
         const effectiveStartTime = barbershopOpenTime > barberStartTime ? barbershopOpenTime : barberStartTime;
-
-
-
-
-
-
-
         const effectiveEndTime = barbershopCloseTime < barberEndTime ? barbershopCloseTime : barberEndTime;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        const lunchStartTime = barberSchedule.lunchTime?.start ? parse(barberSchedule.lunchTime.start, "HH:mm", selectedDate) : null;
-
-
-
-
-
-
-
-        const lunchEndTime = barberSchedule.lunchTime?.end ? parse(barberSchedule.lunchTime.end, "HH:mm", selectedDate) : null;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        const lunchStartRaw = barberSchedule.lunchTime?.start ? parse(barberSchedule.lunchTime.start, "HH:mm", selectedDate) : null;
+        const lunchEndRaw = barberSchedule.lunchTime?.end ? parse(barberSchedule.lunchTime.end, "HH:mm", selectedDate) : null;
+        const lunchStartTime = lunchStartRaw && isValid(lunchStartRaw) ? lunchStartRaw : null;
+        const lunchEndTime = lunchEndRaw && isValid(lunchEndRaw) ? lunchEndRaw : null;
 
         let currentTime = effectiveStartTime;
 
