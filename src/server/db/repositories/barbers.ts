@@ -15,6 +15,30 @@ type BarberInput = {
 
 type BarberUpdateInput = Partial<BarberInput>;
 
+function serializeJsonField(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function parseJsonField<T>(value: unknown): T | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof value === "object") return value as T;
+  return undefined;
+}
+
 function toDomain(model: any): Barber {
   return {
     id: model.id,
@@ -23,7 +47,7 @@ function toDomain(model: any): Barber {
     email: model.email ?? undefined,
     userId: model.userId ?? undefined,
     avatarUrl: model.avatarUrl ?? "",
-    schedule: (model.scheduleJson as BarberSchedule[] | null) ?? [],
+    schedule: parseJsonField<BarberSchedule[]>(model.scheduleJson) ?? [],
     services:
       model.services?.map((s: any) => ({
         serviceId: s.serviceId,
@@ -51,7 +75,7 @@ export async function createBarber(input: BarberInput) {
       phone: input.phone,
       email: input.email,
       avatarUrl: input.avatarUrl,
-      scheduleJson: input.schedule ?? [],
+      scheduleJson: serializeJsonField(input.schedule) ?? [],
       services: {
         create: input.services?.map((s) => ({
           serviceId: s.serviceId,
@@ -72,7 +96,7 @@ export async function updateBarber(id: string, input: BarberUpdateInput) {
       phone: input.phone,
       email: input.email,
       avatarUrl: input.avatarUrl,
-      scheduleJson: input.schedule ?? undefined,
+      scheduleJson: serializeJsonField(input.schedule),
       ...(input.services
         ? {
             services: {

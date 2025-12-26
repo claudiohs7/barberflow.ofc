@@ -947,7 +947,7 @@ export default function BarbershopsPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancelar</Button>
                         </DialogClose>
-                        <Button onClick={handleSave}>Salvar Alteraes</Button>
+                        <Button onClick={handleSave}>Salvar Alterações</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
