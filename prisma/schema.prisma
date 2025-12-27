@@ -215,6 +215,19 @@ model whatsappmessagequeue {
   @@index([status], map: "WhatsappMessageQueue_status_idx")
 }
 
+model adminwhatsapp {
+  id                 String   @id @default(cuid())
+  bitsafiraInstanceId String? @db.VarChar(255)
+  bitSafiraToken     String?  @db.Text
+  templateContent    String?  @db.Text
+  intervalSeconds    Int      @default(10)
+  whatsappStatus     String?  @db.VarChar(100)
+  qrCodeBase64       String?  @db.Text
+  instanceData       String?  @db.LongText
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
 model service {
   id                 String               @id @default(cuid())
   barbershopId       String

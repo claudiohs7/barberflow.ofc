@@ -3232,6 +3232,35 @@ export function BookingWizard({ barbershopIdFromSlug }: { barbershopIdFromSlug: 
 
 
 
+            {selectedBarber && (
+              <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-3 py-2">
+                {selectedBarber.avatarUrl ? (
+                  <Image
+                    src={selectedBarber.avatarUrl}
+                    alt={selectedBarber.name}
+                    width={56}
+                    height={56}
+                    unoptimized
+                    className="h-14 w-14 rounded-full object-cover bg-muted"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted-foreground/20 text-lg font-semibold uppercase">
+                    {selectedBarber.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join("")}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{selectedBarber.name}</p>
+                </div>
+              </div>
+            )}
+
+
+
           </CardContent>
 
 

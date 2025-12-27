@@ -63,11 +63,11 @@ export default function WhatsAppTemplatesPage() {
   const [activeEmojiPicker, setActiveEmojiPicker] = useState<string | null>(null);
   const [selectionMap, setSelectionMap] = useState<Record<string, { start: number; end: number }>>({});
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedPayloadRef = useRef<string>("");
   const isInitialLoadRef = useRef(true);
   const isSavingRef = useRef(false);
   const hasLoadedBarbershopRef = useRef<string | null>(null);
+  const [editingMap, setEditingMap] = useState<Record<string, boolean>>({});
 
 
   const resizeTextarea = useCallback((id: string) => {
@@ -187,13 +187,40 @@ export default function WhatsAppTemplatesPage() {
     templates.forEach((template) => resizeTextarea(template.id));
   }, [templates, resizeTextarea]);
 
+  const handleStartEdit = (id: string) => {
+    setEditingMap((prev) => ({ ...prev, [id]: true }));
+  };
+
+  const handleCancelEdit = (id: string) => {
+    if (lastSavedPayloadRef.current) {
+      try {
+        const saved = JSON.parse(lastSavedPayloadRef.current) as TemplateForm[];
+        const found = saved.find((tpl) => tpl.id === id);
+        if (found) {
+          setTemplates((prev) => prev.map((tpl) => (tpl.id === id ? { ...tpl, ...found } : tpl)));
+          requestAnimationFrame(() => resizeTextarea(id));
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+    setEditingMap((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const handleSaveTemplate = async (id: string) => {
+    const payload = normalizeTemplates(templates);
+    const payloadKey = JSON.stringify(payload);
+    await saveTemplates(payload, { silent: false, payloadKey });
+    setEditingMap((prev) => ({ ...prev, [id]: false }));
+  };
+
   const saveTemplates = useCallback(
     async (payload: TemplateForm[], opts: { silent?: boolean; payloadKey?: string } = {}) => {
       if (!barbershopId) return;
       const normalizedPayload = normalizeTemplates(payload);
 
       const payloadKey = opts.payloadKey ?? JSON.stringify(normalizedPayload);
-      if (opts.silent && payloadKey === lastSavedPayloadRef.current) return;
+      if (payloadKey === lastSavedPayloadRef.current) return;
       if (isSavingRef.current) return;
 
       isSavingRef.current = true;
@@ -222,7 +249,7 @@ export default function WhatsAppTemplatesPage() {
       } catch (error: any) {
         toast({
           variant: "destructive",
-          title: opts.silent ? "Falha ao salvar automaticamente" : "Erro ao salvar",
+          title: "Erro ao salvar",
           description: error?.message || "Revise os campos e tente novamente.",
         });
       } finally {
@@ -232,27 +259,13 @@ export default function WhatsAppTemplatesPage() {
     [barbershopId, normalizeTemplates, syncTemplates, toast]
   );
 
+  // Marca carregamento inicial para não salvar ao montar
   useEffect(() => {
-    if (!barbershopId || isLoading) return;
-    if (isInitialLoadRef.current) {
+    if (!isLoading && !isInitialLoadRef.current) return;
+    if (!isLoading) {
       isInitialLoadRef.current = false;
-      return;
     }
-    const payload = normalizeTemplates(templates);
-    const payloadKey = JSON.stringify(payload);
-    if (payloadKey === lastSavedPayloadRef.current) return;
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      void saveTemplates(payload, { silent: true, payloadKey });
-    }, 800);
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [barbershopId, isLoading, normalizeTemplates, saveTemplates, templates]);
+  }, [isLoading]);
 
   if (isBarbershopIdLoading || isLoading) {
     return (
@@ -321,9 +334,26 @@ export default function WhatsAppTemplatesPage() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Switch
                         checked={!!template.enabled}
-                        onCheckedChange={(checked) => updateTemplate(template.id, { enabled: checked })}
+                        disabled={!editingMap[template.id]}
+                        onCheckedChange={(checked) => {
+                          updateTemplate(template.id, { enabled: checked });
+                        }}
                       />
                       <span>Ativo</span>
+                      {!editingMap[template.id] ? (
+                        <Button size="sm" variant="outline" onClick={() => handleStartEdit(template.id)}>
+                          Editar
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => handleCancelEdit(template.id)}>
+                            Cancelar
+                          </Button>
+                          <Button size="sm" onClick={() => void handleSaveTemplate(template.id)}>
+                            Salvar
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -341,6 +371,7 @@ export default function WhatsAppTemplatesPage() {
                             reminderHoursBefore: e.target.value === "" ? null : Number(e.target.value),
                           })
                         }
+                        disabled={!editingMap[template.id]}
                         placeholder="24"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -360,6 +391,7 @@ export default function WhatsAppTemplatesPage() {
                             variant="outline"
                             size="sm"
                             className="h-8 px-2"
+                            disabled={!editingMap[template.id]}
                             onClick={() => setActiveEmojiPicker((prev) => (prev === template.id ? null : template.id))}
                           >
                             🙂
@@ -390,11 +422,10 @@ export default function WhatsAppTemplatesPage() {
                         textareaRefs.current[template.id] = el;
                       }}
                       value={template.content}
+                      disabled={!editingMap[template.id]}
                       onChange={(e) => handleContentChange(template.id, e.target.value)}
                       onInput={() => resizeTextarea(template.id)}
                       onSelect={(e) => handleSelectionChange(template.id, e.currentTarget)}
-                      onKeyUp={(e) => handleSelectionChange(template.id, e.currentTarget)}
-                      onClick={(e) => handleSelectionChange(template.id, e.currentTarget)}
                     />
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span>Variaveis suportadas:</span>
@@ -406,6 +437,7 @@ export default function WhatsAppTemplatesPage() {
                           size="sm"
                           className="h-6 px-2 text-[11px]"
                           onClick={() => handleInsertVariable(template.id, placeholder)}
+                          disabled={!editingMap[template.id]}
                         >
                           {placeholder}
                         </Button>
@@ -428,3 +460,5 @@ export default function WhatsAppTemplatesPage() {
     </div>
   );
 }
+
+
