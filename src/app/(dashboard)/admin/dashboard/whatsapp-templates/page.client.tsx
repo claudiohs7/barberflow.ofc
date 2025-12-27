@@ -1,21 +1,22 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { Loader2 } from "lucide-react";
+import emojiData from "@emoji-mart/data";
+
 import type { Barbershop, MessageTemplate } from "@/lib/definitions";
 import { messageTemplates as defaultTemplates } from "@/lib/data";
 import { fetchJson } from "@/lib/fetcher";
-import { useToast } from "@/hooks/use-toast";
 import { useBarbershopId } from "@/context/BarbershopIdContext";
 import { useMessageTemplates } from "@/context/MessageTemplatesContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
-import emojiData from "@emoji-mart/data";
+import { Textarea } from "@/components/ui/textarea";
 
 type TemplateForm = MessageTemplate & { reminderHoursBefore?: number | null };
 
@@ -32,14 +33,11 @@ const placeholders = [
 
 const templateHints: Record<string, string> = {
   "Lembrete de Agendamento": "Enviada antes do horario marcado para lembrar o cliente.",
-  "Confirmação de Agendamento": "Confirmacao automatica ao criar ou alterar agendamentos.",
-  "Pesquisa de Satisfação": "Enviada apos o servico para coletar feedback.",
-  "Confirmação Manual": "Use este modelo para disparos manuais e respostas rapidas.",
+  "Confirmação de Agendamento": "Confirmação automática ao criar ou alterar agendamentos.",
+  "Pesquisa de Satisfação": "Enviada após o serviço para coletar feedback.",
+  "Confirmação Manual": "Use este modelo para disparos manuais e respostas rápidas.",
 };
 
-const EmojiPicker = dynamic(async () => import("@emoji-mart/react"), { ssr: false });
-
-const placeholderRegex = new RegExp(`(${placeholders.map((p) => p.replace(/[{}]/g, "\\$&")).join("|")})`, "gi");
 const templateOrder = ["Confirmação de Agendamento", "Lembrete de Agendamento"];
 
 const sortTemplates = (list: TemplateForm[]) =>
@@ -52,6 +50,8 @@ const sortTemplates = (list: TemplateForm[]) =>
     return (a.name || "").localeCompare(b.name || "");
   });
 
+const EmojiPicker = dynamic(async () => import("@emoji-mart/react"), { ssr: false });
+
 export default function WhatsAppTemplatesPage() {
   const { barbershopId, isLoading: isBarbershopIdLoading } = useBarbershopId();
   const { setMessageTemplates } = useMessageTemplates();
@@ -61,21 +61,12 @@ export default function WhatsAppTemplatesPage() {
   const [templates, setTemplates] = useState<TemplateForm[]>(defaultTemplates);
   const [isLoading, setIsLoading] = useState(true);
   const [activeEmojiPicker, setActiveEmojiPicker] = useState<string | null>(null);
-  const [selectionMap, setSelectionMap] = useState<Record<string, { start: number; end: number }>>({});
+
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedPayloadRef = useRef<string>("");
-  const isInitialLoadRef = useRef(true);
   const isSavingRef = useRef(false);
-  const hasLoadedBarbershopRef = useRef<string | null>(null);
-  const [editingMap, setEditingMap] = useState<Record<string, boolean>>({});
-
-
-  const resizeTextarea = useCallback((id: string) => {
-    const textarea = textareaRefs.current[id];
-    if (!textarea) return;
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, []);
+  const templatesRef = useRef<TemplateForm[]>(defaultTemplates);
 
   const normalizeTemplates = useCallback((list: TemplateForm[]) => {
     const normalized = list.map((template) => ({
@@ -90,73 +81,25 @@ export default function WhatsAppTemplatesPage() {
 
   const syncTemplates = useCallback(
     (list: TemplateForm[]) => {
+      templatesRef.current = list;
       setTemplates(list);
       setMessageTemplates(list);
     },
-    [setMessageTemplates]
+    [setMessageTemplates],
   );
 
-  const updateTemplate = useCallback((id: string, patch: Partial<TemplateForm>) => {
-    setTemplates((prev) => prev.map((tpl) => (tpl.id === id ? { ...tpl, ...patch } : tpl)));
+  const resizeTextarea = useCallback((id: string) => {
+    const textarea = textareaRefs.current[id];
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
   }, []);
-
-  const handleContentChange = useCallback(
-    (id: string, value: string) => {
-      updateTemplate(id, { content: value });
-      requestAnimationFrame(() => resizeTextarea(id));
-    },
-    [resizeTextarea, updateTemplate]
-  );
-
-  const appendEmoji = (id: string, emoji: string) => {
-    setTemplates((prev) =>
-      prev.map((tpl) => {
-        if (tpl.id !== id) return tpl;
-        const selection = selectionMap[id] || { start: tpl.content?.length || 0, end: tpl.content?.length || 0 };
-        const base = tpl.content || "";
-        const next = base.slice(0, selection.start) + emoji + base.slice(selection.end ?? selection.start);
-        const cursor = selection.start + (emoji?.length || 0);
-        setSelectionMap((map) => ({ ...map, [id]: { start: cursor, end: cursor } }));
-        return { ...tpl, content: next };
-      })
-    );
-  };
-
-  const handleSelectionChange = (id: string, target: HTMLTextAreaElement) => {
-    setSelectionMap((map) => ({
-      ...map,
-      [id]: { start: target.selectionStart || 0, end: target.selectionEnd || target.selectionStart || 0 },
-    }));
-  };
-
-  const handleInsertVariable = useCallback(
-    (id: string, variable: string) => {
-      const textarea = textareaRefs.current[id];
-      const currentTemplate = templates.find((tpl) => tpl.id === id);
-      if (!textarea || !currentTemplate) return;
-
-      const selection = selectionMap[id] || { start: currentTemplate.content?.length || 0, end: currentTemplate.content?.length || 0 };
-      const base = currentTemplate.content || "";
-      const next = base.slice(0, selection.start) + variable + base.slice(selection.end ?? selection.start);
-      updateTemplate(id, { content: next });
-
-      const cursor = selection.start + variable.length;
-      requestAnimationFrame(() => {
-        textarea.focus();
-        textarea.setSelectionRange(cursor, cursor);
-        resizeTextarea(id);
-      });
-    },
-    [selectionMap, templates, updateTemplate, resizeTextarea]
-  );
 
   const loadBarbershop = useCallback(async () => {
     if (!barbershopId) {
       setIsLoading(false);
       return;
     }
-    if (hasLoadedBarbershopRef.current === barbershopId) return;
-    hasLoadedBarbershopRef.current = barbershopId;
     setIsLoading(true);
     try {
       const response = await fetchJson<{ data: Barbershop }>(`/api/barbershops/${barbershopId}`);
@@ -164,15 +107,14 @@ export default function WhatsAppTemplatesPage() {
       setBarbershop(shop);
       const baseTemplates =
         shop?.messageTemplates && shop.messageTemplates.length > 0 ? shop.messageTemplates : defaultTemplates;
-      const normalizedFiltered = normalizeTemplates(baseTemplates);
-      syncTemplates(normalizedFiltered);
-      lastSavedPayloadRef.current = JSON.stringify(normalizedFiltered);
-      isInitialLoadRef.current = true;
+      const normalized = normalizeTemplates(baseTemplates);
+      syncTemplates(normalized);
+      lastSavedPayloadRef.current = JSON.stringify(normalized);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Erro ao carregar templates",
-        description: error?.message || "Nao foi possivel carregar os dados da barbearia.",
+        description: error?.message || "Não foi possível carregar os dados da barbearia.",
       });
     } finally {
       setIsLoading(false);
@@ -187,85 +129,119 @@ export default function WhatsAppTemplatesPage() {
     templates.forEach((template) => resizeTextarea(template.id));
   }, [templates, resizeTextarea]);
 
-  const handleStartEdit = (id: string) => {
-    setEditingMap((prev) => ({ ...prev, [id]: true }));
-  };
-
-  const handleCancelEdit = (id: string) => {
-    if (lastSavedPayloadRef.current) {
-      try {
-        const saved = JSON.parse(lastSavedPayloadRef.current) as TemplateForm[];
-        const found = saved.find((tpl) => tpl.id === id);
-        if (found) {
-          setTemplates((prev) => prev.map((tpl) => (tpl.id === id ? { ...tpl, ...found } : tpl)));
-          requestAnimationFrame(() => resizeTextarea(id));
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-    setEditingMap((prev) => ({ ...prev, [id]: false }));
-  };
-
-  const handleSaveTemplate = async (id: string) => {
-    const payload = normalizeTemplates(templates);
-    const payloadKey = JSON.stringify(payload);
-    await saveTemplates(payload, { silent: false, payloadKey });
-    setEditingMap((prev) => ({ ...prev, [id]: false }));
-  };
-
-  const saveTemplates = useCallback(
-    async (payload: TemplateForm[], opts: { silent?: boolean; payloadKey?: string } = {}) => {
-      if (!barbershopId) return;
-      const normalizedPayload = normalizeTemplates(payload);
-
-      const payloadKey = opts.payloadKey ?? JSON.stringify(normalizedPayload);
+  const saveTemplatesDebounced = useCallback(
+    (payload: TemplateForm[], immediate = false) => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      const normalized = normalizeTemplates(payload);
+      const payloadKey = JSON.stringify(normalized);
       if (payloadKey === lastSavedPayloadRef.current) return;
-      if (isSavingRef.current) return;
 
-      isSavingRef.current = true;
-      try {
-        const res = await fetch("/api/message-templates/update", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barbershopId, messageTemplates: normalizedPayload }),
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.error || json.message || "Nao foi possivel salvar os modelos.");
-        }
-        const updated = (json.data as TemplateForm[]) || normalizedPayload;
-        const normalizedUpdated = normalizeTemplates(updated);
-        const normalizedUpdatedKey = JSON.stringify(normalizedUpdated);
-        lastSavedPayloadRef.current = normalizedUpdatedKey;
-        syncTemplates(normalizedUpdated);
-        setBarbershop((prev) => (prev ? { ...prev, messageTemplates: normalizedUpdated } : prev));
-        if (!opts.silent) {
-          toast({
-            title: "Templates atualizados",
-            description: "Mensagens salvas com sucesso.",
+      const runSave = async () => {
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
+        try {
+          const res = await fetch("/api/message-templates/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ barbershopId, messageTemplates: normalized }),
           });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || json.message || "Não foi possível salvar os modelos.");
+          const updated = normalizeTemplates((json.data as TemplateForm[]) || normalized);
+          lastSavedPayloadRef.current = JSON.stringify(updated);
+          syncTemplates(updated);
+          toast({ title: "Templates atualizados", description: "Mensagens salvas automaticamente." });
+        } catch (error: any) {
+          toast({
+            variant: "destructive",
+            title: "Erro ao salvar",
+            description: error?.message || "Revise os campos e tente novamente.",
+          });
+        } finally {
+          isSavingRef.current = false;
         }
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao salvar",
-          description: error?.message || "Revise os campos e tente novamente.",
-        });
-      } finally {
-        isSavingRef.current = false;
+      };
+
+      if (immediate) {
+        void runSave();
+        return;
       }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        void runSave();
+      }, 10000); // 10s idle
     },
-    [barbershopId, normalizeTemplates, syncTemplates, toast]
+    [barbershopId, normalizeTemplates, syncTemplates, toast],
   );
 
-  // Marca carregamento inicial para não salvar ao montar
-  useEffect(() => {
-    if (!isLoading && !isInitialLoadRef.current) return;
-    if (!isLoading) {
-      isInitialLoadRef.current = false;
-    }
-  }, [isLoading]);
+  const handleContentChange = (id: string, value: string) => {
+    setTemplates((prev) => {
+      const next = prev.map((tpl) => (tpl.id === id ? { ...tpl, content: value } : tpl));
+      templatesRef.current = next;
+      saveTemplatesDebounced(next, false);
+      return next;
+    });
+  };
+
+  const handleBlur = () => {
+    saveTemplatesDebounced(templatesRef.current, true);
+  };
+
+  const handleToggleEnabled = (id: string, enabled: boolean) => {
+    setTemplates((prev) => {
+      const next = prev.map((tpl) => (tpl.id === id ? { ...tpl, enabled } : tpl));
+      templatesRef.current = next;
+      saveTemplatesDebounced(next, false);
+      return next;
+    });
+  };
+
+  const handleReminderChange = (id: string, value: number | null) => {
+    setTemplates((prev) => {
+      const next = prev.map((tpl) => (tpl.id === id ? { ...tpl, reminderHoursBefore: value } : tpl));
+      templatesRef.current = next;
+      saveTemplatesDebounced(next, false);
+      return next;
+    });
+  };
+
+  const handleInsertVariable = (id: string, variable: string) => {
+    const textarea = textareaRefs.current[id];
+    const tpl = templates.find((t) => t.id === id);
+    if (!textarea || !tpl) return;
+    const base = tpl.content || "";
+    const start = textarea.selectionStart ?? base.length;
+    const end = textarea.selectionEnd ?? start;
+    const next = base.slice(0, start) + variable + base.slice(end);
+    handleContentChange(id, next);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = start + variable.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const appendEmoji = (id: string, emoji: string) => {
+    const textarea = textareaRefs.current[id];
+    const tpl = templates.find((t) => t.id === id);
+    if (!textarea || !tpl) return;
+    const base = tpl.content || "";
+    const start = textarea.selectionStart ?? base.length;
+    const end = textarea.selectionEnd ?? start;
+    const next = base.slice(0, start) + emoji + base.slice(end);
+    handleContentChange(id, next);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = start + emoji.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const isBasicPlan = useMemo(() => (barbershop?.plan || "").toLowerCase().startsWith("b"), [barbershop?.plan]);
+  const sortedTemplates = useMemo(() => {
+    const list = isBasicPlan ? templates.filter((tpl) => tpl.type === "Confirmação Manual") : templates;
+    return sortTemplates(list);
+  }, [isBasicPlan, templates]);
 
   if (isBarbershopIdLoading || isLoading) {
     return (
@@ -283,8 +259,7 @@ export default function WhatsAppTemplatesPage() {
           <CardHeader>
             <CardTitle>Conecte uma barbearia primeiro</CardTitle>
             <CardDescription>
-              Nao encontramos uma barbearia vinculada ao seu usuario. Crie ou selecione uma para
-              habilitar os templates.
+              Não encontramos uma barbearia vinculada ao seu usuário. Crie ou selecione uma para habilitar os templates.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -292,173 +267,138 @@ export default function WhatsAppTemplatesPage() {
     );
   }
 
-  const isBasicPlan = (barbershop?.plan || "").toLowerCase().startsWith("b");
-  const visibleTemplates = isBasicPlan
-    ? templates.filter((tpl) => tpl.type === "Confirmação Manual")
-    : templates;
-  const sortedTemplates = sortTemplates(visibleTemplates);
-
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Templates</h2>
-        <p className="text-muted-foreground">
-          Personalize as mensagens automaticas enviadas no WhatsApp.
-        </p>
+        <p className="text-muted-foreground">Personalize as mensagens automáticas enviadas no WhatsApp.</p>
       </div>
 
-        <Card>
-          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Templates de mensagens</CardTitle>
-              <CardDescription>
-                Ajuste os textos enviados automaticamente apos criar ou alterar agendamentos.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-            {sortedTemplates.map((template) => {
-              const isReminder = template.type === "Lembrete de Agendamento";
-              const isManual = template.type?.toLowerCase().includes("manual");
-
-              return (
-                <div key={template.id} className="space-y-4 rounded-lg border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{template.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {templateHints[template.type] || "Template automatico do fluxo."}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Switch
-                        checked={!!template.enabled}
-                        disabled={!editingMap[template.id]}
-                        onCheckedChange={(checked) => {
-                          updateTemplate(template.id, { enabled: checked });
-                        }}
-                      />
-                      <span>Ativo</span>
-                      {!editingMap[template.id] ? (
-                        <Button size="sm" variant="outline" onClick={() => handleStartEdit(template.id)}>
-                          Editar
-                        </Button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleCancelEdit(template.id)}>
-                            Cancelar
-                          </Button>
-                          <Button size="sm" onClick={() => void handleSaveTemplate(template.id)}>
-                            Salvar
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+      <Card>
+        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Templates de mensagens</CardTitle>
+            <CardDescription>Ajuste os textos enviados automaticamente após criar ou alterar agendamentos.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {sortedTemplates.map((template) => (
+              <div key={template.id} className="space-y-4 rounded-lg border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{template.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {templateHints[template.type] || "Template automático do fluxo."}
+                    </p>
                   </div>
-
-                  {isReminder && (
-                    <div className="space-y-2">
-                      <Label htmlFor={`reminder-${template.id}`}>Horas antes do agendamento</Label>
-                      <Input
-                        id={`reminder-${template.id}`}
-                        type="number"
-                        min={1}
-                        className="max-w-[100px]"
-                        value={template.reminderHoursBefore ?? ""}
-                        onChange={(e) =>
-                          updateTemplate(template.id, {
-                            reminderHoursBefore: e.target.value === "" ? null : Number(e.target.value),
-                          })
-                        }
-                        disabled={!editingMap[template.id]}
-                        placeholder="24"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Define quando o lembrete sera enviado antes do horario marcado.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor={`content-${template.id}`}>Conteudo</Label>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>Emoji</span>
-                        <div className="relative">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2"
-                            disabled={!editingMap[template.id]}
-                            onClick={() => setActiveEmojiPicker((prev) => (prev === template.id ? null : template.id))}
-                          >
-                            🙂
-                          </Button>
-                          {activeEmojiPicker === template.id && (
-                            <div className="absolute right-0 z-10 mt-2 w-[360px] max-w-[90vw] rounded-md border bg-background shadow-lg">
-                              <div className="p-2">
-                                <EmojiPicker
-                                  data={emojiData}
-                                  locale="pt"
-                                  style={{ width: "100%" }}
-                                  onEmojiSelect={(emoji: any) => {
-                                    appendEmoji(template.id, emoji.native || emoji.shortcodes || "");
-                                    setActiveEmojiPicker(null);
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Textarea
-                      id={`content-${template.id}`}
-                      rows={4}
-                      className="resize-none overflow-hidden"
-                      ref={(el) => {
-                        textareaRefs.current[template.id] = el;
-                      }}
-                      value={template.content}
-                      disabled={!editingMap[template.id]}
-                      onChange={(e) => handleContentChange(template.id, e.target.value)}
-                      onInput={() => resizeTextarea(template.id)}
-                      onSelect={(e) => handleSelectionChange(template.id, e.currentTarget)}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Switch
+                      checked={!!template.enabled}
+                      onCheckedChange={(checked) => handleToggleEnabled(template.id, checked)}
+                      onBlur={handleBlur}
                     />
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span>Variaveis suportadas:</span>
-                      {placeholders.map((placeholder) => (
+                    <span>Ativo</span>
+                  </div>
+                </div>
+
+                {template.type === "Lembrete de Agendamento" && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`reminder-${template.id}`}>Horas antes do agendamento</Label>
+                    <Input
+                      id={`reminder-${template.id}`}
+                      type="number"
+                      min={1}
+                      className="max-w-[100px]"
+                      value={template.reminderHoursBefore ?? ""}
+                      onChange={(e) =>
+                        handleReminderChange(
+                          template.id,
+                          e.target.value === "" ? null : Number(e.target.value),
+                        )
+                      }
+                      onBlur={handleBlur}
+                      placeholder="24"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Define quando o lembrete será enviado antes do horário marcado.
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor={`content-${template.id}`}>Conteúdo</Label>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span>Emoji</span>
+                      <div className="relative">
                         <Button
-                          key={placeholder}
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-6 px-2 text-[11px]"
-                          onClick={() => handleInsertVariable(template.id, placeholder)}
-                          disabled={!editingMap[template.id]}
+                          className="h-8 px-2"
+                          onClick={() =>
+                            setActiveEmojiPicker((prev) => (prev === template.id ? null : template.id))
+                          }
                         >
-                          {placeholder}
+                          🙂
                         </Button>
-                      ))}
+                        {activeEmojiPicker === template.id && (
+                          <div className="absolute right-0 z-10 mt-2 w-[360px] max-w-[90vw] rounded-md border bg-background shadow-lg">
+                            <div className="p-2">
+                              <EmojiPicker
+                                data={emojiData}
+                                locale="pt"
+                                style={{ width: "100%" }}
+                                onEmojiSelect={(emoji: any) => {
+                                  appendEmoji(template.id, emoji.native || emoji.shortcodes || "");
+                                  setActiveEmojiPicker(null);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="text-xs text-muted-foreground">
-                    {isManual
-                      ? "Os textos acima sao usados nas notificacoes manuais do BarberFlow (confirmacao manual)."
-                      : "Os textos acima sao usados nas notificacoes automaticas do BarberFlow."}
+                  <Textarea
+                    id={`content-${template.id}`}
+                    rows={5}
+                    className="min-h-[140px] w-full resize-none rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-3 text-sm leading-relaxed shadow-inner focus:border-slate-400 focus:ring-2 focus:ring-slate-500/60"
+                    ref={(el) => {
+                      textareaRefs.current[template.id] = el;
+                    }}
+                    value={template.content || ""}
+                    onChange={(e) => handleContentChange(template.id, e.target.value)}
+                    onBlur={handleBlur}
+                  />
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Variáveis suportadas:</span>
+                    {placeholders.map((placeholder) => (
+                      <Button
+                        key={placeholder}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[11px]"
+                        onClick={() => handleInsertVariable(template.id, placeholder)}
+                      >
+                        {placeholder}
+                      </Button>
+                    ))}
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
+                <div className="text-xs text-muted-foreground">
+                  {template.type?.toLowerCase().includes("manual")
+                    ? "Os textos acima são usados nas notificações manuais do BarberFlow (confirmação manual)."
+                    : "Os textos acima são usados nas notificações automáticas do BarberFlow."}
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-

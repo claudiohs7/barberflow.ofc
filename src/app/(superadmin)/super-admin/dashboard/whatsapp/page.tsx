@@ -17,6 +17,7 @@ type AdminWhatsappSettings = {
   bitsafiraInstanceId?: string | null;
   whatsappStatus?: string | null;
   qrCodeBase64?: string | null;
+  instanceData?: any;
 };
 
 type StatusMeta = {
@@ -98,6 +99,30 @@ export default function SuperAdminWhatsappPage() {
 
   const statusInfo = getStatusInfo(settings?.whatsappStatus);
   const isDisconnectedStatus = settings?.whatsappStatus === "DISCONNECTED";
+
+  const connectedNumber = useMemo(() => {
+    const data = (settings as any)?.instanceData || {};
+    const raw =
+      data?.conexao?.instance?.whatsapp ||
+      data?.conexao?.instance?.phoneConnected ||
+      data?.conexao?.instance?.numero ||
+      data?.conexao?.instance?.telefone ||
+      data?.conexao?.whatsapp ||
+      data?.conexao?.numero ||
+      data?.whatsapp ||
+      data?.numero ||
+      data?.phone ||
+      data?.telefone ||
+      data?.instance?.whatsapp ||
+      data?.instance?.numero ||
+      data?.instance?.telefone ||
+      null;
+    if (!raw) return null;
+    const digits = String(raw).replace(/\D/g, "");
+    if (digits.length < 10) return raw;
+    if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+  }, [settings]);
 
   const qrCodeUrl = useMemo(() => {
     if (!settings?.qrCodeBase64) return null;
@@ -397,6 +422,14 @@ export default function SuperAdminWhatsappPage() {
                   <div className="space-y-1">
                     <p className="font-semibold">Estado atual: {statusInfo.label}</p>
                     <p className="text-sm text-muted-foreground">{statusInfo.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Número conectado:{" "}
+                      <span className="font-medium text-foreground">
+                        {settings?.whatsappStatus === "CONNECTED"
+                          ? connectedNumber || "Não informado"
+                          : "Conecte para exibir"}
+                      </span>
+                    </p>
                   </div>
                 </div>
 

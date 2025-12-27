@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     success: true,
     data: {
       ...settings,
+      instanceData,
       intervalSecondsB: instanceData.intervalSecondsB ?? settings.intervalSeconds,
       attachmentBase64: instanceData.attachmentBase64 ?? null,
       attachmentName: instanceData.attachmentName ?? null,
